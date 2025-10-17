@@ -5,7 +5,7 @@ import os
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from threading import Lock
+from threading import RLock
 
 
 class JSONStateStore:
@@ -16,7 +16,7 @@ class JSONStateStore:
         self.data_dir.mkdir(exist_ok=True)
         self.runs_dir = self.data_dir / "runs"
         self.runs_dir.mkdir(exist_ok=True)
-        self._lock = Lock()
+        self._lock = RLock()
 
     def _run_file(self, run_id: str) -> Path:
         """Get the JSON file path for a workflow run"""
@@ -91,24 +91,26 @@ class JSONStateStore:
 
     def update_ctx(self, run_id: str, ctx_update: Dict[str, Any]) -> None:
         """Update workflow context"""
-        data = self._load_run_data(run_id)
-        data["ctx"].update(ctx_update)
-        self._save_run_data(run_id, data)
+        with self._lock:
+            data = self._load_run_data(run_id)
+            data["ctx"].update(ctx_update)
+            self._save_run_data(run_id, data)
 
     def upsert_task(self, run_id: str, name: str, **kwargs) -> None:
         """Insert or update task state"""
-        data = self._load_run_data(run_id)
+        with self._lock:
+            data = self._load_run_data(run_id)
 
-        if name not in data["tasks"]:
-            data["tasks"][name] = {}
+            if name not in data["tasks"]:
+                data["tasks"][name] = {}
 
-        # Update task data
-        task_data = data["tasks"][name]
-        for key, value in kwargs.items():
-            if value is not None:
-                task_data[key] = value
+            # Update task data
+            task_data = data["tasks"][name]
+            for key, value in kwargs.items():
+                if value is not None:
+                    task_data[key] = value
 
-        self._save_run_data(run_id, data)
+            self._save_run_data(run_id, data)
 
     def get_task(self, run_id: str, name: str) -> Optional[Dict[str, Any]]:
         """Get task state"""

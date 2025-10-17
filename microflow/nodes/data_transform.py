@@ -689,7 +689,7 @@ def select_fields(data_key: str = "data", fields: List[str] = None, output_key: 
         fields = []
 
     expression = f"{{k: item[k] for k in {fields} if k in item}}"
-    return data_transform(data_key, expression, output_key, name=f"select_{len(fields)}_fields")
+    return data_transform(expression, data_key=data_key, output_key=output_key, name=f"select_{len(fields)}_fields")
 
 
 def rename_fields(data_key: str = "data", field_mapping: Dict[str, str] = None, output_key: str = "renamed_data"):
@@ -697,23 +697,60 @@ def rename_fields(data_key: str = "data", field_mapping: Dict[str, str] = None, 
     if not field_mapping:
         field_mapping = {}
 
-    # Build expression to rename fields
-    mapping_expr = repr(field_mapping)
+    # Build expression that directly embeds the mapping
+    mapping_repr = repr(field_mapping)
     expression = f"{{mapping.get(k, k): v for k, v in item.items()}} if isinstance(item, dict) else item"
 
-    # We need to inject the mapping into the evaluation context
-    transform_task = data_transform(data_key, expression, output_key, name="rename_fields")
+    # Create the transform task with correct parameter order
+    transform_task = data_transform(expression, data_key=data_key, output_key=output_key, name="rename_fields")
 
-    # Override the function to inject mapping
+    # Override the function to inject mapping into evaluation context
     original_fn = transform_task.spec.fn
 
     def enhanced_fn(ctx):
-        # Add mapping to context temporarily
-        ctx['mapping'] = field_mapping
-        result = original_fn(ctx)
-        # Clean up
-        ctx.pop('mapping', None)
-        return result
+        data = ctx.get(data_key)
+        if data is None:
+            return {
+                "transform_success": False,
+                "transform_error": f"No data found in context key: {data_key}"
+            }
+
+        if not isinstance(data, list):
+            return {
+                "transform_success": False,
+                "transform_error": "Data must be a list"
+            }
+
+        try:
+            transformed_items = []
+            for item in data:
+                # Create safe evaluation context with mapping included
+                eval_context = {
+                    'item': item,
+                    'ctx': ctx,
+                    'mapping': field_mapping,
+                    '__builtins__': {
+                        'isinstance': isinstance,
+                        'dict': dict
+                    }
+                }
+
+                transformed_item = eval(expression, eval_context)
+                transformed_items.append(transformed_item)
+
+            return {
+                output_key: transformed_items,
+                "transform_success": True,
+                "item_count": len(transformed_items),
+                "transform_expression": expression
+            }
+
+        except Exception as e:
+            return {
+                "transform_success": False,
+                "transform_error": f"Transform error: {e}",
+                "transform_expression": expression
+            }
 
     transform_task.spec.fn = enhanced_fn
     return transform_task

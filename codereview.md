@@ -1,0 +1,9 @@
+# Code Review Findings
+
+## High Severity
+- `microflow/storage/json_store.py:92-111` — `JSONStateStore.update_ctx`/`upsert_task` perform a read–modify–write cycle without holding the lock across the whole operation. When multiple tasks in the same run complete concurrently (the engine uses `asyncio.gather` for ready tasks), two updates on the context or task state can interleave so that the later writer persists a copy of the JSON snapshot that never contained the other task’s changes. The result is lost task metadata and missing context keys for downstream nodes. The fix is to guard the entire load/update/save sequence with the same lock or to redesign the store so updates are merged atomically.
+
+- `microflow/nodes/data_transform.py:685-693` — `select_fields` passes its arguments to `data_transform` in the wrong order (`data_transform(data_key, expression, …)`), so inside `_data_transform` the engine looks up `ctx.get(expression)` instead of the real data key and immediately returns `{"transform_success": False, "transform_error": "No data found…"}`. The helper therefore never works; swap the arguments so the expression is supplied as the first parameter.
+
+- `microflow/nodes/data_transform.py:695-718` — `rename_fields` has two compounding bugs: it also calls `data_transform` with parameters out of order (so the source data is never found), and even after fixing that, the generated expression refers to `mapping` but the eval context only contains `item` and `ctx`. As written the best case is `"No data found"`; if the ordering were fixed it would raise `NameError: name 'mapping' is not defined`. Ensure the call order is `data_transform(expression, data_key=..., …)` and inject `mapping` into the evaluation context (e.g. extend the eval locals or reference `ctx['mapping']` in the expression).
+
