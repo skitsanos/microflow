@@ -31,7 +31,7 @@ A lightweight, powerful workflow engine for Python that provides deterministic t
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/microflow.git
+git clone https://github.com/skitsanos/microflow.git
 cd microflow
 
 # Setup with Task (recommended)
@@ -350,7 +350,7 @@ We welcome contributions! Here's how to get started:
 ### Development Setup
 ```bash
 # Fork and clone the repository
-git clone https://github.com/your-username/microflow.git
+git clone https://github.com/skitsanos/microflow.git
 cd microflow
 
 # Setup development environment
