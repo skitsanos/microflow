@@ -1,0 +1,70 @@
+version: '3'
+
+tasks:
+  basic:
+    desc: Run basic example workflow
+    deps: [install]
+    cmds:
+      - |
+        . {{.VENV_DIR}}/bin/activate
+        python examples/basic_workflow.py
+
+  n8n:
+    desc: Run n8n-style nodes example
+    deps: [install]
+    cmds:
+      - |
+        . {{.VENV_DIR}}/bin/activate
+        python examples/n8n_style_nodes.py
+
+  api:
+    desc: Run API workflow example
+    deps: [install]
+    cmds:
+      - |
+        . {{.VENV_DIR}}/bin/activate
+        python examples/api_workflow.py
+
+  subworkflow:
+    desc: Run sub-workflow example
+    deps: [install]
+    cmds:
+      - |
+        . {{.VENV_DIR}}/bin/activate
+        python examples/subworkflow_example.py
+
+  extended:
+    desc: Run extended nodes demo (Shell, File, Data, Timing, Notifications)
+    deps: [install]
+    cmds:
+      - |
+        . {{.VENV_DIR}}/bin/activate
+        python examples/extended_nodes_demo.py
+
+  data-formats:
+    desc: Run data formats demo (CSV/Excel operations)
+    deps: [install]
+    cmds:
+      - |
+        . {{.VENV_DIR}}/bin/activate
+        PYTHONPATH=. python examples/data_formats_demo.py
+
+  all:
+    desc: Run all examples
+    deps: [install]
+    cmds:
+      - |
+        . {{.VENV_DIR}}/bin/activate
+        printf '%s\n' "🔄 Running basic workflow example..."
+        python examples/basic_workflow.py
+        printf '\n\n%s\n' "🔄 Running n8n-style nodes example..."
+        python examples/n8n_style_nodes.py
+        printf '\n\n%s\n' "🔄 Running API workflow example..."
+        python examples/api_workflow.py
+        printf '\n\n%s\n' "🔄 Running sub-workflow example..."
+        python examples/subworkflow_example.py
+        printf '\n\n%s\n' "🔄 Running extended nodes demo..."
+        python examples/extended_nodes_demo.py
+        printf '\n\n%s\n' "🔄 Running data formats demo..."
+        PYTHONPATH=. python examples/data_formats_demo.py
+        printf '\n\n%s\n' "✅ All examples completed!"

@@ -13,3 +13,5 @@ mypy>=1.7.1
 
 # Optional dependencies for enhanced features
 httpx>=0.25.2  # for HTTP tasks
+pandas>=2.0.0  # for Excel operations (optional)
+openpyxl>=3.1.0  # for Excel file support (optional)

@@ -1,7 +1,11 @@
 version: '3'
 
+includes:
+  examples: Task.examples.yml
+
 vars:
-  PYTHON: python3
+  PYTHON:
+    sh: "command -v python3.13 || command -v python3.12 || command -v python3"
   VENV_DIR: .venv
   REQUIREMENTS: requirements.txt
 
@@ -14,25 +18,28 @@ tasks:
         echo "Virtual environment created at {{.VENV_DIR}}"
         echo "Activate with: source {{.VENV_DIR}}/bin/activate"
     status:
-      - "test -d {{.VENV_DIR}}"
+      - test -d {{.VENV_DIR}}
+      - test -x {{.VENV_DIR}}/bin/python3 || test -x {{.VENV_DIR}}/bin/python
 
   install:
     desc: Install dependencies in virtual environment
     deps: [venv]
     cmds:
       - |
-        source {{.VENV_DIR}}/bin/activate
+        . {{.VENV_DIR}}/bin/activate
         pip install --upgrade pip
-        pip install -r {{.REQUIREMENTS}}
-    sources:
-      - "{{.REQUIREMENTS}}"
+        pip install --upgrade -r {{.REQUIREMENTS}}
+        touch {{.VENV_DIR}}/.requirements.stamp
+    status:
+      - test -f {{.VENV_DIR}}/.requirements.stamp
+      - test {{.VENV_DIR}}/.requirements.stamp -nt {{.REQUIREMENTS}}
 
   dev-install:
     desc: Install development dependencies
     deps: [install]
     cmds:
       - |
-        source {{.VENV_DIR}}/bin/activate
+        . {{.VENV_DIR}}/bin/activate
         pip install -e .
 
   clean:
@@ -49,7 +56,7 @@ tasks:
     deps: [install]
     cmds:
       - |
-        source {{.VENV_DIR}}/bin/activate
+        . {{.VENV_DIR}}/bin/activate
         python -m pytest tests/ -v
 
   lint:
@@ -57,12 +64,12 @@ tasks:
     deps: [install]
     cmds:
       - |
-        source {{.VENV_DIR}}/bin/activate
-        echo "Running black code formatter check..."
+        . {{.VENV_DIR}}/bin/activate
+        printf '%s\n' "Running black code formatter check..."
         black --check microflow/
-        echo "Running flake8 linter..."
+        printf '%s\n' "Running flake8 linter..."
         flake8 microflow/
-        echo "Running mypy type checker..."
+        printf '%s\n' "Running mypy type checker..."
         mypy microflow/
 
   format:
@@ -70,8 +77,8 @@ tasks:
     deps: [install]
     cmds:
       - |
-        source {{.VENV_DIR}}/bin/activate
-        echo "Formatting code with black..."
+        . {{.VENV_DIR}}/bin/activate
+        printf '%s\n' "Formatting code with black..."
         black microflow/
 
   run:
@@ -79,66 +86,13 @@ tasks:
     deps: [install]
     cmds:
       - |
-        source {{.VENV_DIR}}/bin/activate
-        python -m microflow.api
-
-  example:
-    desc: Run basic example workflow
-    deps: [install]
-    cmds:
-      - |
-        source {{.VENV_DIR}}/bin/activate
-        python examples/basic_workflow.py
-
-  example-n8n:
-    desc: Run n8n-style nodes example
-    deps: [install]
-    cmds:
-      - |
-        source {{.VENV_DIR}}/bin/activate
-        python examples/n8n_style_nodes.py
-
-  example-api:
-    desc: Run API workflow example
-    deps: [install]
-    cmds:
-      - |
-        source {{.VENV_DIR}}/bin/activate
-        python examples/api_workflow.py
-
-  example-subworkflow:
-    desc: Run sub-workflow example
-    deps: [install]
-    cmds:
-      - |
-        source {{.VENV_DIR}}/bin/activate
-        python examples/subworkflow_example.py
-
-  example-extended:
-    desc: Run extended nodes demo (Shell, File, Data, Timing, Notifications)
-    deps: [install]
-    cmds:
-      - |
-        source {{.VENV_DIR}}/bin/activate
-        python examples/extended_nodes_demo.py
-
-  example-all:
-    desc: Run all examples
-    deps: [install]
-    cmds:
-      - |
-        source {{.VENV_DIR}}/bin/activate
-        echo "🔄 Running basic workflow example..."
-        python examples/basic_workflow.py
-        echo -e "\n\n🔄 Running n8n-style nodes example..."
-        python examples/n8n_style_nodes.py
-        echo -e "\n\n🔄 Running API workflow example..."
-        python examples/api_workflow.py
-        echo -e "\n\n🔄 Running sub-workflow example..."
-        python examples/subworkflow_example.py
-        echo -e "\n\n🔄 Running extended nodes demo..."
-        python examples/extended_nodes_demo.py
-        echo -e "\n\n✅ All examples completed!"
+        . {{.VENV_DIR}}/bin/activate
+        if python -c "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('microflow.api') else 1)"
+        then
+          python -m microflow.api
+        else
+          printf '%s\n' "microflow.api module not found. Skipping API server run."
+        fi
 
   check:
     desc: Run all checks (lint + test)
@@ -153,19 +107,23 @@ tasks:
       - task: venv
       - task: install
       - |
-        echo "✅ Setup complete!"
-        echo "📋 Available commands:"
-        echo "  task example       - Run basic example"
-        echo "  task example-all   - Run all examples"
-        echo "  task lint          - Check code quality"
-        echo "  task test          - Run tests"
-        echo "  task format        - Format code"
+        printf '%s\n' "✅ Setup complete!"
+        printf '%s\n' "📋 Available commands:"
+        printf '%s\n' "  task examples:basic - Run basic example"
+        printf '%s\n' "  task examples:all   - Run all examples"
+        printf '%s\n' "  task lint          - Check code quality"
+        printf '%s\n' "  task test          - Run tests"
+        printf '%s\n' "  task format        - Format code"
         
   codex-review:
     desc: Run Codex code review on the codebase
     deps: [install]
     cmds:
       - |
-        source {{.VENV_DIR}}/bin/activate
-        echo "Running Codex code review..."
-        codex --sandbox read-only exec "Review this Python project for potential issues and improvements."
+        . {{.VENV_DIR}}/bin/activate
+        if command -v codex >/dev/null 2>&1; then
+          printf '%s\n' "Running Codex code review..."
+          codex --sandbox read-only exec "Review this Python project for potential issues and improvements."
+        else
+          printf '%s\n' "Codex CLI not found; skipping codex-review task."
+        fi
