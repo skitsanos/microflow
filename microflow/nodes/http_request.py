@@ -2,7 +2,7 @@
 
 import asyncio
 import json
-from typing import Any, Dict, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union
 from urllib.parse import urljoin
 
 try:

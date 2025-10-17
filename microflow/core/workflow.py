@@ -5,7 +5,7 @@ import json
 import time
 import traceback
 import uuid
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Optional, Set
 
 from .task_spec import Task
 from ..storage.json_store import JSONStateStore

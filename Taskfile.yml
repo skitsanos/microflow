@@ -10,17 +10,20 @@ tasks:
     desc: Create Python virtual environment
     cmds:
       - "{{.PYTHON}} -m venv {{.VENV_DIR}}"
-      - echo "Virtual environment created at {{.VENV_DIR}}"
-      - echo "Activate with: source {{.VENV_DIR}}/bin/activate"
+      - |
+        echo "Virtual environment created at {{.VENV_DIR}}"
+        echo "Activate with: source {{.VENV_DIR}}/bin/activate"
     status:
-      - test -d {{.VENV_DIR}}
+      - "test -d {{.VENV_DIR}}"
 
   install:
     desc: Install dependencies in virtual environment
     deps: [venv]
     cmds:
-      - "{{.VENV_DIR}}/bin/pip install --upgrade pip"
-      - "{{.VENV_DIR}}/bin/pip install -r {{.REQUIREMENTS}}"
+      - |
+        source {{.VENV_DIR}}/bin/activate
+        pip install --upgrade pip
+        pip install -r {{.REQUIREMENTS}}
     sources:
       - "{{.REQUIREMENTS}}"
 
@@ -28,76 +31,122 @@ tasks:
     desc: Install development dependencies
     deps: [install]
     cmds:
-      - "{{.VENV_DIR}}/bin/pip install -e ."
+      - |
+        source {{.VENV_DIR}}/bin/activate
+        pip install -e .
 
   clean:
     desc: Clean up virtual environment and cache files
     cmds:
-      - rm -rf {{.VENV_DIR}}
-      - find . -type d -name "__pycache__" -exec rm -rf {} +
-      - find . -type f -name "*.pyc" -delete
-      - rm -rf *.egg-info
-      - rm -rf build dist
+      - |
+        rm -rf {{.VENV_DIR}}
+        find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+        find . -type f -name "*.pyc" -delete 2>/dev/null || true
+        rm -rf *.egg-info build dist
 
   test:
     desc: Run tests
     deps: [install]
     cmds:
-      - "{{.VENV_DIR}}/bin/python -m pytest tests/ -v"
+      - |
+        source {{.VENV_DIR}}/bin/activate
+        python -m pytest tests/ -v
 
   lint:
     desc: Run code linting
     deps: [install]
     cmds:
-      - "{{.VENV_DIR}}/bin/black --check microflow/"
-      - "{{.VENV_DIR}}/bin/flake8 microflow/"
-      - "{{.VENV_DIR}}/bin/mypy microflow/"
+      - |
+        source {{.VENV_DIR}}/bin/activate
+        echo "Running black code formatter check..."
+        black --check microflow/
+        echo "Running flake8 linter..."
+        flake8 microflow/
+        echo "Running mypy type checker..."
+        mypy microflow/
 
   format:
     desc: Format code
     deps: [install]
     cmds:
-      - "{{.VENV_DIR}}/bin/black microflow/"
+      - |
+        source {{.VENV_DIR}}/bin/activate
+        echo "Formatting code with black..."
+        black microflow/
 
   run:
     desc: Run the microflow API server
     deps: [install]
     cmds:
-      - "{{.VENV_DIR}}/bin/python -m microflow.api"
+      - |
+        source {{.VENV_DIR}}/bin/activate
+        python -m microflow.api
 
   example:
     desc: Run basic example workflow
     deps: [install]
     cmds:
-      - "{{.VENV_DIR}}/bin/python examples/basic_workflow.py"
+      - |
+        source {{.VENV_DIR}}/bin/activate
+        python examples/basic_workflow.py
 
   example-n8n:
     desc: Run n8n-style nodes example
     deps: [install]
     cmds:
-      - "{{.VENV_DIR}}/bin/python examples/n8n_style_nodes.py"
+      - |
+        source {{.VENV_DIR}}/bin/activate
+        python examples/n8n_style_nodes.py
 
   example-api:
     desc: Run API workflow example
     deps: [install]
     cmds:
-      - "{{.VENV_DIR}}/bin/python examples/api_workflow.py"
+      - |
+        source {{.VENV_DIR}}/bin/activate
+        python examples/api_workflow.py
 
   example-subworkflow:
     desc: Run sub-workflow example
     deps: [install]
     cmds:
-      - "{{.VENV_DIR}}/bin/python examples/subworkflow_example.py"
+      - |
+        source {{.VENV_DIR}}/bin/activate
+        python examples/subworkflow_example.py
 
   example-all:
     desc: Run all examples
     deps: [install]
     cmds:
-      - echo "Running basic workflow example..."
-      - "{{.VENV_DIR}}/bin/python examples/basic_workflow.py"
-      - echo -e "\n\nRunning n8n-style nodes example..."
-      - "{{.VENV_DIR}}/bin/python examples/n8n_style_nodes.py"
-      - echo -e "\n\nRunning API workflow example..."
-      - "{{.VENV_DIR}}/bin/python examples/api_workflow.py"
-      - echo -e "\n\nRunning sub-workflow example..."
-      - "{{.VENV_DIR}}/bin/python examples/subworkflow_example.py"
+      - |
+        source {{.VENV_DIR}}/bin/activate
+        echo "🔄 Running basic workflow example..."
+        python examples/basic_workflow.py
+        echo -e "\n\n🔄 Running n8n-style nodes example..."
+        python examples/n8n_style_nodes.py
+        echo -e "\n\n🔄 Running API workflow example..."
+        python examples/api_workflow.py
+        echo -e "\n\n🔄 Running sub-workflow example..."
+        python examples/subworkflow_example.py
+        echo -e "\n\n✅ All examples completed!"
+
+  check:
+    desc: Run all checks (lint + test)
+    deps: [install]
+    cmds:
+      - task: lint
+      - task: test
+
+  setup:
+    desc: Complete project setup
+    cmds:
+      - task: venv
+      - task: install
+      - |
+        echo "✅ Setup complete!"
+        echo "📋 Available commands:"
+        echo "  task example       - Run basic example"
+        echo "  task example-all   - Run all examples"
+        echo "  task lint          - Check code quality"
+        echo "  task test          - Run tests"
+        echo "  task format        - Format code"
