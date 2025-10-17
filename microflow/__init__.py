@@ -23,6 +23,21 @@ from .nodes.subworkflow import (
     subworkflow, parallel_subworkflows, workflow_chain,
     WorkflowLoader, load_workflow_from_file
 )
+from .nodes.shell import (
+    shell_command, python_script, git_command, docker_command
+)
+from .nodes.file_ops import (
+    read_file, write_file, copy_file, move_file, list_directory
+)
+from .nodes.data_transform import (
+    json_parse, json_stringify, csv_parse, data_filter, data_transform
+)
+from .nodes.timing import (
+    delay, wait_until, wait_for_condition, rate_limit
+)
+from .nodes.notifications import (
+    send_email, slack_notification, simple_email
+)
 
 __all__ = [
     # Core components
@@ -59,4 +74,35 @@ __all__ = [
     "workflow_chain",
     "WorkflowLoader",
     "load_workflow_from_file",
+
+    # Shell/Process nodes
+    "shell_command",
+    "python_script",
+    "git_command",
+    "docker_command",
+
+    # File operation nodes
+    "read_file",
+    "write_file",
+    "copy_file",
+    "move_file",
+    "list_directory",
+
+    # Data transformation nodes
+    "json_parse",
+    "json_stringify",
+    "csv_parse",
+    "data_filter",
+    "data_transform",
+
+    # Timing nodes
+    "delay",
+    "wait_until",
+    "wait_for_condition",
+    "rate_limit",
+
+    # Notification nodes
+    "send_email",
+    "slack_notification",
+    "simple_email",
 ]

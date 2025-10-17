@@ -153,8 +153,13 @@ def conditional_task(
             return {"message": "Low value detected"}
     """
     def decorator(func):
-        original_task = task(**task_kwargs)(func)
-        original_fn = original_task.spec.fn
+        # Check if func is already a Task
+        if hasattr(func, 'spec'):
+            original_task = func
+            original_fn = func.spec.fn
+        else:
+            original_task = task(**task_kwargs)(func)
+            original_fn = original_task.spec.fn
 
         async def conditional_wrapper(ctx):
             # Find the route information in context
@@ -170,7 +175,7 @@ def conditional_task(
 
             if route_key and ctx.get(route_key) == route:
                 # Route matches, execute the task
-                if asyncio.iscoroutine(original_fn(ctx)):
+                if asyncio.iscoroutinefunction(original_fn):
                     return await original_fn(ctx)
                 else:
                     return original_fn(ctx)

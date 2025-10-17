@@ -114,6 +114,14 @@ tasks:
         source {{.VENV_DIR}}/bin/activate
         python examples/subworkflow_example.py
 
+  example-extended:
+    desc: Run extended nodes demo (Shell, File, Data, Timing, Notifications)
+    deps: [install]
+    cmds:
+      - |
+        source {{.VENV_DIR}}/bin/activate
+        python examples/extended_nodes_demo.py
+
   example-all:
     desc: Run all examples
     deps: [install]
@@ -128,6 +136,8 @@ tasks:
         python examples/api_workflow.py
         echo -e "\n\n🔄 Running sub-workflow example..."
         python examples/subworkflow_example.py
+        echo -e "\n\n🔄 Running extended nodes demo..."
+        python examples/extended_nodes_demo.py
         echo -e "\n\n✅ All examples completed!"
 
   check:
@@ -150,3 +160,12 @@ tasks:
         echo "  task lint          - Check code quality"
         echo "  task test          - Run tests"
         echo "  task format        - Format code"
+        
+  codex-review:
+    desc: Run Codex code review on the codebase
+    deps: [install]
+    cmds:
+      - |
+        source {{.VENV_DIR}}/bin/activate
+        echo "Running Codex code review..."
+        codex --sandbox read-only exec "Review this Python project for potential issues and improvements."
