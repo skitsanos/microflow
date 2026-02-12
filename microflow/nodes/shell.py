@@ -5,7 +5,7 @@ import os
 import shlex
 import subprocess
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from ..core.task_spec import task
 
@@ -20,7 +20,7 @@ def shell_command(
     check_return_code: bool = True,
     name: Optional[str] = None,
     max_retries: int = 0,
-    backoff_s: float = 1.0
+    backoff_s: float = 1.0,
 ):
     """
     Execute a shell command or external process.
@@ -46,8 +46,13 @@ def shell_command(
     """
     node_name = name or f"shell_{command[:20] if isinstance(command, str) else 'cmd'}"
 
-    @task(name=node_name, max_retries=max_retries, backoff_s=backoff_s,
-          timeout_s=timeout, description=f"Execute: {command}")
+    @task(
+        name=node_name,
+        max_retries=max_retries,
+        backoff_s=backoff_s,
+        timeout_s=timeout,
+        description=f"Execute: {command}",
+    )
     async def _shell_command(ctx):
         # Resolve dynamic values from context
         resolved_command = command
@@ -55,7 +60,9 @@ def shell_command(
             # Replace context variables: "echo {{user_id}}" -> "echo user123"
             resolved_command = command.format(**ctx)
         elif isinstance(command, list):
-            resolved_command = [arg.format(**ctx) if isinstance(arg, str) else arg for arg in command]
+            resolved_command = [
+                arg.format(**ctx) if isinstance(arg, str) else arg for arg in command
+            ]
 
         # Resolve working directory
         resolved_cwd = cwd
@@ -80,7 +87,7 @@ def shell_command(
                     stdout=subprocess.PIPE if capture_output else None,
                     stderr=subprocess.PIPE if capture_output else None,
                     cwd=resolved_cwd,
-                    env=resolved_env
+                    env=resolved_env,
                 )
             else:
                 # Direct execution
@@ -92,18 +99,17 @@ def shell_command(
                     stdout=subprocess.PIPE if capture_output else None,
                     stderr=subprocess.PIPE if capture_output else None,
                     cwd=resolved_cwd,
-                    env=resolved_env
+                    env=resolved_env,
                 )
 
             # Wait for completion with timeout
             stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=timeout
+                process.communicate(), timeout=timeout
             )
 
             # Decode output
-            stdout_text = stdout.decode('utf-8') if stdout else ""
-            stderr_text = stderr.decode('utf-8') if stderr else ""
+            stdout_text = stdout.decode("utf-8") if stdout else ""
+            stderr_text = stderr.decode("utf-8") if stderr else ""
 
             # Check return code
             if check_return_code and process.returncode != 0:
@@ -116,14 +122,16 @@ def shell_command(
                 "shell_stderr": stderr_text,
                 "shell_returncode": process.returncode,
                 "shell_success": process.returncode == 0,
-                "shell_command": resolved_command
+                "shell_command": resolved_command,
             }
 
         except asyncio.TimeoutError:
             if process:
                 process.kill()
                 await process.wait()
-            raise TimeoutError(f"Command timed out after {timeout} seconds: {resolved_command}")
+            raise TimeoutError(
+                f"Command timed out after {timeout} seconds: {resolved_command}"
+            )
 
         except subprocess.CalledProcessError as e:
             return {
@@ -132,7 +140,7 @@ def shell_command(
                 "shell_returncode": e.returncode,
                 "shell_success": False,
                 "shell_command": resolved_command,
-                "shell_error": str(e)
+                "shell_error": str(e),
             }
 
     return _shell_command
@@ -143,7 +151,7 @@ def python_script(
     args: Optional[List[str]] = None,
     python_executable: str = "python",
     venv_path: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Execute a Python script.
@@ -171,16 +179,12 @@ def python_script(
     return shell_command(
         command=command,
         shell=False,
-        name=kwargs.pop('name', f"python_{Path(script_path).stem}"),
-        **kwargs
+        name=kwargs.pop("name", f"python_{Path(script_path).stem}"),
+        **kwargs,
     )
 
 
-def git_command(
-    git_args: List[str],
-    repo_path: Optional[str] = None,
-    **kwargs
-):
+def git_command(git_args: List[str], repo_path: Optional[str] = None, **kwargs):
     """
     Execute a git command.
 
@@ -195,15 +199,12 @@ def git_command(
         command=command,
         shell=False,
         cwd=repo_path,
-        name=kwargs.pop('name', f"git_{git_args[0] if git_args else 'cmd'}"),
-        **kwargs
+        name=kwargs.pop("name", f"git_{git_args[0] if git_args else 'cmd'}"),
+        **kwargs,
     )
 
 
-def docker_command(
-    docker_args: List[str],
-    **kwargs
-):
+def docker_command(docker_args: List[str], **kwargs):
     """
     Execute a Docker command.
 
@@ -216,16 +217,12 @@ def docker_command(
     return shell_command(
         command=command,
         shell=False,
-        name=kwargs.pop('name', f"docker_{docker_args[0] if docker_args else 'cmd'}"),
-        **kwargs
+        name=kwargs.pop("name", f"docker_{docker_args[0] if docker_args else 'cmd'}"),
+        **kwargs,
     )
 
 
-def npm_command(
-    npm_args: List[str],
-    project_path: Optional[str] = None,
-    **kwargs
-):
+def npm_command(npm_args: List[str], project_path: Optional[str] = None, **kwargs):
     """
     Execute an npm command.
 
@@ -240,8 +237,8 @@ def npm_command(
         command=command,
         shell=False,
         cwd=project_path,
-        name=kwargs.pop('name', f"npm_{npm_args[0] if npm_args else 'cmd'}"),
-        **kwargs
+        name=kwargs.pop("name", f"npm_{npm_args[0] if npm_args else 'cmd'}"),
+        **kwargs,
     )
 
 
@@ -252,7 +249,7 @@ def curl_request(
     data: Optional[str] = None,
     output_file: Optional[str] = None,
     follow_redirects: bool = True,
-    **kwargs
+    **kwargs,
 ):
     """
     Make HTTP request using curl.
@@ -291,8 +288,8 @@ def curl_request(
     return shell_command(
         command=command,
         shell=False,
-        name=kwargs.pop('name', f"curl_{method.lower()}"),
-        **kwargs
+        name=kwargs.pop("name", f"curl_{method.lower()}"),
+        **kwargs,
     )
 
 
@@ -300,7 +297,7 @@ def background_process(
     command: Union[str, List[str]],
     pidfile: Optional[str] = None,
     name: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Start a background process.
@@ -320,7 +317,9 @@ def background_process(
         if isinstance(command, str):
             resolved_command = command.format(**ctx)
         elif isinstance(command, list):
-            resolved_command = [arg.format(**ctx) if isinstance(arg, str) else arg for arg in command]
+            resolved_command = [
+                arg.format(**ctx) if isinstance(arg, str) else arg for arg in command
+            ]
 
         try:
             # Start background process
@@ -328,25 +327,25 @@ def background_process(
                 process = await asyncio.create_subprocess_shell(
                     resolved_command,
                     stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
+                    stderr=subprocess.DEVNULL,
                 )
             else:
                 process = await asyncio.create_subprocess_exec(
                     *resolved_command,
                     stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL
+                    stderr=subprocess.DEVNULL,
                 )
 
             # Save PID if requested
             if pidfile:
-                with open(pidfile, 'w') as f:
+                with open(pidfile, "w") as f:
                     f.write(str(process.pid))
 
             return {
                 "background_pid": process.pid,
                 "background_command": resolved_command,
                 "background_started": True,
-                "background_pidfile": pidfile
+                "background_pidfile": pidfile,
             }
 
         except Exception as e:
@@ -354,7 +353,7 @@ def background_process(
                 "background_pid": None,
                 "background_command": resolved_command,
                 "background_started": False,
-                "background_error": str(e)
+                "background_error": str(e),
             }
 
     return _background_process
@@ -364,7 +363,7 @@ def kill_process(
     pid: Optional[int] = None,
     pidfile: Optional[str] = None,
     signal: int = 15,  # SIGTERM
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Kill a process by PID or PID file.
@@ -384,19 +383,16 @@ def kill_process(
         # Read PID from file if not provided directly
         if target_pid is None and pidfile:
             try:
-                with open(pidfile, 'r') as f:
+                with open(pidfile, "r") as f:
                     target_pid = int(f.read().strip())
             except (FileNotFoundError, ValueError) as e:
                 return {
                     "kill_success": False,
-                    "kill_error": f"Could not read PID from {pidfile}: {e}"
+                    "kill_error": f"Could not read PID from {pidfile}: {e}",
                 }
 
         if target_pid is None:
-            return {
-                "kill_success": False,
-                "kill_error": "No PID provided"
-            }
+            return {"kill_success": False, "kill_error": "No PID provided"}
 
         try:
             os.kill(target_pid, signal)
@@ -405,27 +401,20 @@ def kill_process(
             if pidfile and os.path.exists(pidfile):
                 os.remove(pidfile)
 
-            return {
-                "kill_success": True,
-                "kill_pid": target_pid,
-                "kill_signal": signal
-            }
+            return {"kill_success": True, "kill_pid": target_pid, "kill_signal": signal}
 
         except ProcessLookupError:
             return {
                 "kill_success": False,
-                "kill_error": f"Process {target_pid} not found"
+                "kill_error": f"Process {target_pid} not found",
             }
         except PermissionError:
             return {
                 "kill_success": False,
-                "kill_error": f"Permission denied to kill process {target_pid}"
+                "kill_error": f"Permission denied to kill process {target_pid}",
             }
         except Exception as e:
-            return {
-                "kill_success": False,
-                "kill_error": str(e)
-            }
+            return {"kill_success": False, "kill_error": str(e)}
 
     return _kill_process
 
@@ -433,32 +422,37 @@ def kill_process(
 # Convenience functions for common shell operations
 def run_script(script_path: str, **kwargs):
     """Run a shell script"""
-    return shell_command(f"bash {script_path}", name=f"script_{Path(script_path).stem}", **kwargs)
+    return shell_command(
+        f"bash {script_path}", name=f"script_{Path(script_path).stem}", **kwargs
+    )
+
 
 def make_executable(file_path: str, **kwargs):
     """Make a file executable"""
     return shell_command(f"chmod +x {file_path}", name="make_executable", **kwargs)
 
+
 def create_directory(dir_path: str, **kwargs):
     """Create a directory"""
     return shell_command(f"mkdir -p {dir_path}", name="create_directory", **kwargs)
 
+
 def remove_directory(dir_path: str, **kwargs):
     """Remove a directory"""
     return shell_command(f"rm -rf {dir_path}", name="remove_directory", **kwargs)
+
 
 def archive_files(source_path: str, archive_path: str, **kwargs):
     """Create tar.gz archive"""
     return shell_command(
         f"tar -czf {archive_path} -C {Path(source_path).parent} {Path(source_path).name}",
         name="archive_files",
-        **kwargs
+        **kwargs,
     )
+
 
 def extract_archive(archive_path: str, dest_path: str, **kwargs):
     """Extract tar.gz archive"""
     return shell_command(
-        f"tar -xzf {archive_path} -C {dest_path}",
-        name="extract_archive",
-        **kwargs
+        f"tar -xzf {archive_path} -C {dest_path}", name="extract_archive", **kwargs
     )

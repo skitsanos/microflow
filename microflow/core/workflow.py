@@ -37,16 +37,14 @@ class Workflow:
 
         if len(order) != len(self.tasks):
             cycle_tasks = [task for task in self.tasks if task not in order]
-            raise RuntimeError(f"Cycle detected in workflow. Tasks in cycle: {cycle_tasks}")
+            raise RuntimeError(
+                f"Cycle detected in workflow. Tasks in cycle: {cycle_tasks}"
+            )
 
         return order
 
     async def _run_task(
-        self,
-        store: JSONStateStore,
-        run_id: str,
-        task: Task,
-        ctx: Dict[str, Any]
+        self, store: JSONStateStore, run_id: str, task: Task, ctx: Dict[str, Any]
     ) -> None:
         """Execute a single task with retries and error handling"""
         spec = task.spec
@@ -55,14 +53,15 @@ class Workflow:
         while True:
             attempt += 1
             store.upsert_task(
-                run_id, spec.name,
+                run_id,
+                spec.name,
                 status="running",
                 attempt=attempt,
                 input=json.dumps(ctx, default=str),
                 output=None,
                 error=None,
                 started=time.time(),
-                finished=None
+                finished=None,
             )
 
             try:
@@ -83,24 +82,28 @@ class Workflow:
 
                 # Mark task as successful
                 store.upsert_task(
-                    run_id, spec.name,
+                    run_id,
+                    spec.name,
                     status="success",
                     attempt=attempt,
                     output=json.dumps(result, default=str),
                     error=None,
-                    finished=time.time()
+                    finished=time.time(),
                 )
                 return
 
             except Exception as e:
-                error_msg = "".join(traceback.format_exception(type(e), e, e.__traceback__))
+                error_msg = "".join(
+                    traceback.format_exception(type(e), e, e.__traceback__)
+                )
                 store.upsert_task(
-                    run_id, spec.name,
+                    run_id,
+                    spec.name,
                     status="error",
                     attempt=attempt,
                     output=None,
                     error=error_msg,
-                    finished=time.time()
+                    finished=time.time(),
                 )
 
                 # Check if we should retry
@@ -109,14 +112,16 @@ class Workflow:
 
                 # Apply backoff before retry
                 if spec.backoff_s > 0:
-                    backoff_time = spec.backoff_s * (2 ** (attempt - 1))  # Exponential backoff
+                    backoff_time = spec.backoff_s * (
+                        2 ** (attempt - 1)
+                    )  # Exponential backoff
                     await asyncio.sleep(backoff_time)
 
     async def run(
         self,
         run_id: Optional[str] = None,
         store: Optional[JSONStateStore] = None,
-        initial_ctx: Optional[Dict[str, Any]] = None
+        initial_ctx: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Execute the workflow"""
         if run_id is None:
@@ -146,27 +151,35 @@ class Workflow:
             while remaining_tasks:
                 # Find tasks whose dependencies are all satisfied
                 ready_tasks = [
-                    task for task in remaining_tasks
-                    if all(upstream_task in completed_tasks for upstream_task in task.upstream)
+                    task
+                    for task in remaining_tasks
+                    if all(
+                        upstream_task in completed_tasks
+                        for upstream_task in task.upstream
+                    )
                 ]
 
                 if not ready_tasks:
                     store.set_run_status(run_id, "stalled")
-                    raise RuntimeError("No runnable tasks; upstream failures or circular dependencies")
+                    raise RuntimeError(
+                        "No runnable tasks; upstream failures or circular dependencies"
+                    )
 
                 # Execute ready tasks in parallel
                 try:
-                    await asyncio.gather(*[
-                        self._run_task(store, run_id, task, ctx)
-                        for task in ready_tasks
-                    ])
+                    await asyncio.gather(
+                        *[
+                            self._run_task(store, run_id, task, ctx)
+                            for task in ready_tasks
+                        ]
+                    )
 
                     # Mark tasks as completed and remove from remaining
                     completed_tasks.update(ready_tasks)
                     for task in ready_tasks:
                         remaining_tasks.remove(task)
 
-                except Exception as e:
+                except Exception:
                     store.set_run_status(run_id, "failed")
                     raise
 
@@ -174,7 +187,7 @@ class Workflow:
             store.set_run_status(run_id, "success")
             return store.get_ctx(run_id)
 
-        except Exception as e:
+        except Exception:
             if store.get_run_info(run_id)["status"] != "failed":
                 store.set_run_status(run_id, "failed")
             raise

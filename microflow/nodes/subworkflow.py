@@ -1,8 +1,8 @@
 """Sub-workflow execution node"""
 
 import asyncio
+import importlib
 import importlib.util
-import os
 import uuid
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -18,37 +18,41 @@ class WorkflowLoader:
     @staticmethod
     def load_from_file(file_path: str) -> Workflow:
         """Load a workflow from a Python file"""
-        file_path = Path(file_path)
-        if not file_path.exists():
-            raise FileNotFoundError(f"Workflow file not found: {file_path}")
+        workflow_path = Path(file_path)
+        if not workflow_path.exists():
+            raise FileNotFoundError(f"Workflow file not found: {workflow_path}")
 
         # Load the module
-        spec = importlib.util.spec_from_file_location("workflow_module", file_path)
+        spec = importlib.util.spec_from_file_location("workflow_module", workflow_path)
         if spec is None or spec.loader is None:
-            raise ImportError(f"Could not load workflow from {file_path}")
+            raise ImportError(f"Could not load workflow from {workflow_path}")
 
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
         # Look for a workflow creation function
-        if hasattr(module, 'create_workflow'):
+        if hasattr(module, "create_workflow"):
             return module.create_workflow()
-        elif hasattr(module, 'workflow'):
+        elif hasattr(module, "workflow"):
             return module.workflow
         else:
-            raise AttributeError(f"Workflow file {file_path} must define 'create_workflow()' function or 'workflow' variable")
+            raise AttributeError(
+                f"Workflow file {workflow_path} must define 'create_workflow()' function or 'workflow' variable"
+            )
 
     @staticmethod
     def load_from_module(module_path: str, workflow_name: str = "workflow") -> Workflow:
         """Load a workflow from an importable module"""
         try:
             module = importlib.import_module(module_path)
-            if hasattr(module, 'create_workflow'):
+            if hasattr(module, "create_workflow"):
                 return module.create_workflow()
             elif hasattr(module, workflow_name):
                 return getattr(module, workflow_name)
             else:
-                raise AttributeError(f"Module {module_path} must define 'create_workflow()' function or '{workflow_name}' variable")
+                raise AttributeError(
+                    f"Module {module_path} must define 'create_workflow()' function or '{workflow_name}' variable"
+                )
         except ImportError as e:
             raise ImportError(f"Could not import module {module_path}: {e}")
 
@@ -62,7 +66,7 @@ def subworkflow(
     inherit_store: bool = True,
     timeout_s: Optional[float] = None,
     max_retries: int = 0,
-    backoff_s: float = 1.0
+    backoff_s: float = 1.0,
 ):
     """
     Create a sub-workflow execution node.
@@ -90,8 +94,13 @@ def subworkflow(
     """
     node_name = name or f"subworkflow_{uuid.uuid4().hex[:8]}"
 
-    @task(name=node_name, max_retries=max_retries, backoff_s=backoff_s,
-          timeout_s=timeout_s, description="Execute sub-workflow")
+    @task(
+        name=node_name,
+        max_retries=max_retries,
+        backoff_s=backoff_s,
+        timeout_s=timeout_s,
+        description="Execute sub-workflow",
+    )
     async def _subworkflow(ctx):
         # Load the workflow
         if isinstance(workflow_source, Workflow):
@@ -141,9 +150,7 @@ def subworkflow(
         try:
             # Execute child workflow
             child_result = await child_workflow.run(
-                run_id=child_run_id,
-                store=child_store,
-                initial_ctx=child_ctx
+                run_id=child_run_id, store=child_store, initial_ctx=child_ctx
             )
 
             # Extract output data
@@ -155,13 +162,15 @@ def subworkflow(
                         output_data[key] = child_result[key]
             else:
                 # Extract all non-private data
-                output_data = {k: v for k, v in child_result.items() if not k.startswith("_")}
+                output_data = {
+                    k: v for k, v in child_result.items() if not k.startswith("_")
+                }
 
             # Return results
             result = {
                 "subworkflow_success": True,
                 "subworkflow_run_id": child_run_id,
-                "subworkflow_result": child_result
+                "subworkflow_result": child_result,
             }
             result.update(output_data)
 
@@ -172,7 +181,7 @@ def subworkflow(
                 "subworkflow_success": False,
                 "subworkflow_run_id": child_run_id,
                 "subworkflow_error": str(e),
-                "subworkflow_result": None
+                "subworkflow_result": None,
             }
 
     return _subworkflow
@@ -182,7 +191,7 @@ def parallel_subworkflows(
     workflows: List[Dict[str, Any]],
     name: Optional[str] = None,
     max_concurrent: int = 5,
-    timeout_s: Optional[float] = None
+    timeout_s: Optional[float] = None,
 ):
     """
     Execute multiple sub-workflows in parallel.
@@ -205,18 +214,22 @@ def parallel_subworkflows(
     """
     node_name = name or "parallel_subworkflows"
 
-    @task(name=node_name, timeout_s=timeout_s, description="Execute parallel sub-workflows")
+    @task(
+        name=node_name,
+        timeout_s=timeout_s,
+        description="Execute parallel sub-workflows",
+    )
     async def _parallel_subworkflows(ctx):
         # Create sub-workflow tasks
         subworkflow_tasks = []
         for i, wf_config in enumerate(workflows):
-            sub_name = wf_config.get('name', f"parallel_{i}")
+            sub_name = wf_config.get("name", f"parallel_{i}")
             sub_task = subworkflow(
-                workflow_source=wf_config['source'],
-                context_mapping=wf_config.get('context_mapping'),
-                input_keys=wf_config.get('input_keys'),
-                output_keys=wf_config.get('output_keys'),
-                name=sub_name
+                workflow_source=wf_config["source"],
+                context_mapping=wf_config.get("context_mapping"),
+                input_keys=wf_config.get("input_keys"),
+                output_keys=wf_config.get("output_keys"),
+                name=sub_name,
             )
             subworkflow_tasks.append(sub_task.spec.fn(ctx))
 
@@ -230,7 +243,7 @@ def parallel_subworkflows(
         # Run all sub-workflows
         results = await asyncio.gather(
             *[run_with_semaphore(task) for task in subworkflow_tasks],
-            return_exceptions=True
+            return_exceptions=True,
         )
 
         # Process results
@@ -239,19 +252,23 @@ def parallel_subworkflows(
 
         for i, result in enumerate(results):
             if isinstance(result, Exception):
-                failed_results.append({
-                    "index": i,
-                    "error": str(result),
-                    "workflow": workflows[i].get('name', f"parallel_{i}")
-                })
-            elif result.get('subworkflow_success', False):
+                failed_results.append(
+                    {
+                        "index": i,
+                        "error": str(result),
+                        "workflow": workflows[i].get("name", f"parallel_{i}"),
+                    }
+                )
+            elif result.get("subworkflow_success", False):
                 successful_results.append(result)
             else:
-                failed_results.append({
-                    "index": i,
-                    "error": result.get('subworkflow_error', 'Unknown error'),
-                    "workflow": workflows[i].get('name', f"parallel_{i}")
-                })
+                failed_results.append(
+                    {
+                        "index": i,
+                        "error": result.get("subworkflow_error", "Unknown error"),
+                        "workflow": workflows[i].get("name", f"parallel_{i}"),
+                    }
+                )
 
         return {
             "parallel_results": results,
@@ -260,10 +277,10 @@ def parallel_subworkflows(
                 "total": len(workflows),
                 "successful": len(successful_results),
                 "failed": len(failed_results),
-                "success_rate": len(successful_results) / len(workflows)
+                "success_rate": len(successful_results) / len(workflows),
             },
             "parallel_successful": successful_results,
-            "parallel_failed": failed_results
+            "parallel_failed": failed_results,
         }
 
     return _parallel_subworkflows
@@ -289,7 +306,7 @@ def workflow_chain(*workflow_sources, context_keys: Optional[List[str]] = None):
             workflow_source=source,
             input_keys=context_keys,
             output_keys=context_keys,
-            name=f"chain_step_{i}"
+            name=f"chain_step_{i}",
         )
         tasks.append(sub_task)
 

@@ -2,10 +2,9 @@
 
 import asyncio
 import json
-import os
 import shutil
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Optional, Union
 
 from ..core.task_spec import task
 
@@ -14,7 +13,7 @@ def read_file(
     file_path: str,
     encoding: str = "utf-8",
     binary_mode: bool = False,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Read file contents.
@@ -36,7 +35,9 @@ def read_file(
     @task(name=node_name, description=f"Read file: {file_path}")
     def _read_file(ctx):
         # Resolve file path from context
-        resolved_path = file_path.format(**ctx) if isinstance(file_path, str) else file_path
+        resolved_path = (
+            file_path.format(**ctx) if isinstance(file_path, str) else file_path
+        )
         path_obj = Path(resolved_path)
 
         if not path_obj.exists():
@@ -45,22 +46,22 @@ def read_file(
                 "file_path": resolved_path,
                 "file_size": 0,
                 "file_exists": False,
-                "file_error": "File not found"
+                "file_error": "File not found",
             }
 
         try:
             if binary_mode:
-                with open(path_obj, 'rb') as f:
+                with open(path_obj, "rb") as f:
                     content = f.read()
             else:
-                with open(path_obj, 'r', encoding=encoding) as f:
+                with open(path_obj, "r", encoding=encoding) as f:
                     content = f.read()
 
             return {
                 "file_content": content,
                 "file_path": resolved_path,
                 "file_size": path_obj.stat().st_size,
-                "file_exists": True
+                "file_exists": True,
             }
 
         except Exception as e:
@@ -69,7 +70,7 @@ def read_file(
                 "file_path": resolved_path,
                 "file_size": 0,
                 "file_exists": True,
-                "file_error": str(e)
+                "file_error": str(e),
             }
 
     return _read_file
@@ -81,7 +82,7 @@ def write_file(
     encoding: str = "utf-8",
     append_mode: bool = False,
     create_dirs: bool = True,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Write content to file.
@@ -105,7 +106,9 @@ def write_file(
     @task(name=node_name, description=f"Write file: {file_path}")
     def _write_file(ctx):
         # Resolve file path and content from context
-        resolved_path = file_path.format(**ctx) if isinstance(file_path, str) else file_path
+        resolved_path = (
+            file_path.format(**ctx) if isinstance(file_path, str) else file_path
+        )
 
         # Resolve content from context if it's a template
         resolved_content = content
@@ -125,11 +128,11 @@ def write_file(
 
             # Write content
             if isinstance(resolved_content, bytes):
-                mode = 'ab' if append_mode else 'wb'
+                mode = "ab" if append_mode else "wb"
                 with open(path_obj, mode) as f:
                     bytes_written = f.write(resolved_content)
             else:
-                mode = 'a' if append_mode else 'w'
+                mode = "a" if append_mode else "w"
                 with open(path_obj, mode, encoding=encoding) as f:
                     bytes_written = f.write(resolved_content)
                     if isinstance(resolved_content, str):
@@ -139,7 +142,7 @@ def write_file(
                 "file_written": True,
                 "file_path": resolved_path,
                 "file_size": path_obj.stat().st_size,
-                "bytes_written": bytes_written
+                "bytes_written": bytes_written,
             }
 
         except Exception as e:
@@ -148,7 +151,7 @@ def write_file(
                 "file_path": resolved_path,
                 "file_size": 0,
                 "bytes_written": 0,
-                "file_error": str(e)
+                "file_error": str(e),
             }
 
     return _write_file
@@ -159,7 +162,7 @@ def copy_file(
     dest_path: str,
     overwrite: bool = True,
     preserve_metadata: bool = True,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Copy a file.
@@ -176,8 +179,12 @@ def copy_file(
     @task(name=node_name, description=f"Copy {source_path} to {dest_path}")
     def _copy_file(ctx):
         # Resolve paths
-        resolved_source = source_path.format(**ctx) if isinstance(source_path, str) else source_path
-        resolved_dest = dest_path.format(**ctx) if isinstance(dest_path, str) else dest_path
+        resolved_source = (
+            source_path.format(**ctx) if isinstance(source_path, str) else source_path
+        )
+        resolved_dest = (
+            dest_path.format(**ctx) if isinstance(dest_path, str) else dest_path
+        )
 
         source_obj = Path(resolved_source)
         dest_obj = Path(resolved_dest)
@@ -187,7 +194,7 @@ def copy_file(
                 "copy_success": False,
                 "source_path": resolved_source,
                 "dest_path": resolved_dest,
-                "copy_error": "Source file not found"
+                "copy_error": "Source file not found",
             }
 
         if dest_obj.exists() and not overwrite:
@@ -195,7 +202,7 @@ def copy_file(
                 "copy_success": False,
                 "source_path": resolved_source,
                 "dest_path": resolved_dest,
-                "copy_error": "Destination exists and overwrite is disabled"
+                "copy_error": "Destination exists and overwrite is disabled",
             }
 
         try:
@@ -212,7 +219,7 @@ def copy_file(
                 "copy_success": True,
                 "source_path": resolved_source,
                 "dest_path": resolved_dest,
-                "file_size": dest_obj.stat().st_size
+                "file_size": dest_obj.stat().st_size,
             }
 
         except Exception as e:
@@ -220,17 +227,14 @@ def copy_file(
                 "copy_success": False,
                 "source_path": resolved_source,
                 "dest_path": resolved_dest,
-                "copy_error": str(e)
+                "copy_error": str(e),
             }
 
     return _copy_file
 
 
 def move_file(
-    source_path: str,
-    dest_path: str,
-    overwrite: bool = True,
-    name: Optional[str] = None
+    source_path: str, dest_path: str, overwrite: bool = True, name: Optional[str] = None
 ):
     """
     Move/rename a file.
@@ -246,8 +250,12 @@ def move_file(
     @task(name=node_name, description=f"Move {source_path} to {dest_path}")
     def _move_file(ctx):
         # Resolve paths
-        resolved_source = source_path.format(**ctx) if isinstance(source_path, str) else source_path
-        resolved_dest = dest_path.format(**ctx) if isinstance(dest_path, str) else dest_path
+        resolved_source = (
+            source_path.format(**ctx) if isinstance(source_path, str) else source_path
+        )
+        resolved_dest = (
+            dest_path.format(**ctx) if isinstance(dest_path, str) else dest_path
+        )
 
         source_obj = Path(resolved_source)
         dest_obj = Path(resolved_dest)
@@ -257,7 +265,7 @@ def move_file(
                 "move_success": False,
                 "source_path": resolved_source,
                 "dest_path": resolved_dest,
-                "move_error": "Source file not found"
+                "move_error": "Source file not found",
             }
 
         if dest_obj.exists() and not overwrite:
@@ -265,7 +273,7 @@ def move_file(
                 "move_success": False,
                 "source_path": resolved_source,
                 "dest_path": resolved_dest,
-                "move_error": "Destination exists and overwrite is disabled"
+                "move_error": "Destination exists and overwrite is disabled",
             }
 
         try:
@@ -279,7 +287,7 @@ def move_file(
                 "move_success": True,
                 "source_path": resolved_source,
                 "dest_path": resolved_dest,
-                "file_size": dest_obj.stat().st_size
+                "file_size": dest_obj.stat().st_size,
             }
 
         except Exception as e:
@@ -287,17 +295,13 @@ def move_file(
                 "move_success": False,
                 "source_path": resolved_source,
                 "dest_path": resolved_dest,
-                "move_error": str(e)
+                "move_error": str(e),
             }
 
     return _move_file
 
 
-def delete_file(
-    file_path: str,
-    missing_ok: bool = True,
-    name: Optional[str] = None
-):
+def delete_file(file_path: str, missing_ok: bool = True, name: Optional[str] = None):
     """
     Delete a file.
 
@@ -311,7 +315,9 @@ def delete_file(
     @task(name=node_name, description=f"Delete file: {file_path}")
     def _delete_file(ctx):
         # Resolve path
-        resolved_path = file_path.format(**ctx) if isinstance(file_path, str) else file_path
+        resolved_path = (
+            file_path.format(**ctx) if isinstance(file_path, str) else file_path
+        )
         path_obj = Path(resolved_path)
 
         if not path_obj.exists():
@@ -319,27 +325,24 @@ def delete_file(
                 return {
                     "delete_success": True,
                     "file_path": resolved_path,
-                    "delete_message": "File did not exist"
+                    "delete_message": "File did not exist",
                 }
             else:
                 return {
                     "delete_success": False,
                     "file_path": resolved_path,
-                    "delete_error": "File not found"
+                    "delete_error": "File not found",
                 }
 
         try:
             path_obj.unlink()
-            return {
-                "delete_success": True,
-                "file_path": resolved_path
-            }
+            return {"delete_success": True, "file_path": resolved_path}
 
         except Exception as e:
             return {
                 "delete_success": False,
                 "file_path": resolved_path,
-                "delete_error": str(e)
+                "delete_error": str(e),
             }
 
     return _delete_file
@@ -351,7 +354,7 @@ def list_directory(
     recursive: bool = False,
     include_hidden: bool = False,
     file_info: bool = True,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     List directory contents.
@@ -374,7 +377,9 @@ def list_directory(
     @task(name=node_name, description=f"List directory: {dir_path}")
     def _list_directory(ctx):
         # Resolve directory path
-        resolved_path = dir_path.format(**ctx) if isinstance(dir_path, str) else dir_path
+        resolved_path = (
+            dir_path.format(**ctx) if isinstance(dir_path, str) else dir_path
+        )
         path_obj = Path(resolved_path)
 
         if not path_obj.exists():
@@ -382,7 +387,7 @@ def list_directory(
                 "dir_files": [],
                 "dir_count": 0,
                 "dir_path": resolved_path,
-                "dir_error": "Directory not found"
+                "dir_error": "Directory not found",
             }
 
         if not path_obj.is_dir():
@@ -390,7 +395,7 @@ def list_directory(
                 "dir_files": [],
                 "dir_count": 0,
                 "dir_path": resolved_path,
-                "dir_error": "Path is not a directory"
+                "dir_error": "Path is not a directory",
             }
 
         try:
@@ -405,7 +410,7 @@ def list_directory(
 
             for file_path in file_paths:
                 # Skip hidden files if not requested
-                if not include_hidden and file_path.name.startswith('.'):
+                if not include_hidden and file_path.name.startswith("."):
                     continue
 
                 file_data = {
@@ -413,16 +418,18 @@ def list_directory(
                     "path": str(file_path),
                     "relative_path": str(file_path.relative_to(path_obj)),
                     "is_file": file_path.is_file(),
-                    "is_dir": file_path.is_dir()
+                    "is_dir": file_path.is_dir(),
                 }
 
                 if file_info and file_path.exists():
                     stat = file_path.stat()
-                    file_data.update({
-                        "size": stat.st_size,
-                        "modified": stat.st_mtime,
-                        "permissions": oct(stat.st_mode)[-3:]
-                    })
+                    file_data.update(
+                        {
+                            "size": stat.st_size,
+                            "modified": stat.st_mtime,
+                            "permissions": oct(stat.st_mode)[-3:],
+                        }
+                    )
 
                 files.append(file_data)
 
@@ -432,7 +439,7 @@ def list_directory(
             return {
                 "dir_files": files,
                 "dir_count": len(files),
-                "dir_path": resolved_path
+                "dir_path": resolved_path,
             }
 
         except Exception as e:
@@ -440,7 +447,7 @@ def list_directory(
                 "dir_files": [],
                 "dir_count": 0,
                 "dir_path": resolved_path,
-                "dir_error": str(e)
+                "dir_error": str(e),
             }
 
     return _list_directory
@@ -450,7 +457,7 @@ def create_directory(
     dir_path: str,
     parents: bool = True,
     exist_ok: bool = True,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Create a directory.
@@ -466,7 +473,9 @@ def create_directory(
     @task(name=node_name, description=f"Create directory: {dir_path}")
     def _create_directory(ctx):
         # Resolve path
-        resolved_path = dir_path.format(**ctx) if isinstance(dir_path, str) else dir_path
+        resolved_path = (
+            dir_path.format(**ctx) if isinstance(dir_path, str) else dir_path
+        )
         path_obj = Path(resolved_path)
 
         try:
@@ -474,14 +483,14 @@ def create_directory(
             return {
                 "dir_created": True,
                 "dir_path": resolved_path,
-                "dir_existed": path_obj.exists()
+                "dir_existed": path_obj.exists(),
             }
 
         except Exception as e:
             return {
                 "dir_created": False,
                 "dir_path": resolved_path,
-                "dir_error": str(e)
+                "dir_error": str(e),
             }
 
     return _create_directory
@@ -492,7 +501,7 @@ def watch_file(
     check_interval: float = 1.0,
     timeout: Optional[float] = None,
     wait_for_creation: bool = False,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Watch a file for changes.
@@ -509,14 +518,16 @@ def watch_file(
     @task(name=node_name, timeout_s=timeout, description=f"Watch file: {file_path}")
     async def _watch_file(ctx):
         # Resolve path
-        resolved_path = file_path.format(**ctx) if isinstance(file_path, str) else file_path
+        resolved_path = (
+            file_path.format(**ctx) if isinstance(file_path, str) else file_path
+        )
         path_obj = Path(resolved_path)
 
         if not path_obj.exists() and not wait_for_creation:
             return {
                 "watch_success": False,
                 "file_path": resolved_path,
-                "watch_error": "File not found"
+                "watch_error": "File not found",
             }
 
         try:
@@ -531,7 +542,7 @@ def watch_file(
                     return {
                         "watch_success": False,
                         "file_path": resolved_path,
-                        "watch_error": "Timeout waiting for file change"
+                        "watch_error": "Timeout waiting for file change",
                     }
 
                 # Check if file exists now
@@ -542,7 +553,7 @@ def watch_file(
                         return {
                             "watch_success": False,
                             "file_path": resolved_path,
-                            "watch_error": "File was deleted"
+                            "watch_error": "File was deleted",
                         }
 
                 # Check for changes
@@ -553,14 +564,14 @@ def watch_file(
                         "file_path": resolved_path,
                         "file_changed": True,
                         "last_modified": current_mtime,
-                        "watch_duration": asyncio.get_event_loop().time() - start_time
+                        "watch_duration": asyncio.get_event_loop().time() - start_time,
                     }
 
         except Exception as e:
             return {
                 "watch_success": False,
                 "file_path": resolved_path,
-                "watch_error": str(e)
+                "watch_error": str(e),
             }
 
     return _watch_file
@@ -571,7 +582,9 @@ def read_json_file(file_path: str, **kwargs):
     """Read and parse JSON file"""
     read_task = read_file(file_path, **kwargs)
 
-    @task(name=f"read_json_{Path(file_path).stem}", description=f"Read JSON: {file_path}")
+    @task(
+        name=f"read_json_{Path(file_path).stem}", description=f"Read JSON: {file_path}"
+    )
     def _read_json_file(ctx):
         # First read the file
         result = read_task.spec.fn(ctx)
@@ -595,9 +608,15 @@ def read_json_file(file_path: str, **kwargs):
     return _read_json_file
 
 
-def write_json_file(file_path: str, data_key: str = "json_data", indent: int = 2, **kwargs):
+def write_json_file(
+    file_path: str, data_key: str = "json_data", indent: int = 2, **kwargs
+):
     """Write data as JSON file"""
-    @task(name=f"write_json_{Path(file_path).stem}", description=f"Write JSON: {file_path}")
+
+    @task(
+        name=f"write_json_{Path(file_path).stem}",
+        description=f"Write JSON: {file_path}",
+    )
     def _write_json_file(ctx):
         # Get data from context
         data = ctx.get(data_key)
@@ -605,7 +624,7 @@ def write_json_file(file_path: str, data_key: str = "json_data", indent: int = 2
             return {
                 "file_written": False,
                 "file_path": file_path,
-                "file_error": f"No data found in context key: {data_key}"
+                "file_error": f"No data found in context key: {data_key}",
             }
 
         try:
@@ -620,7 +639,7 @@ def write_json_file(file_path: str, data_key: str = "json_data", indent: int = 2
             return {
                 "file_written": False,
                 "file_path": file_path,
-                "file_error": f"JSON serialization error: {e}"
+                "file_error": f"JSON serialization error: {e}",
             }
 
     return _write_json_file

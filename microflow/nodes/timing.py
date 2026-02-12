@@ -3,15 +3,12 @@
 import asyncio
 import time
 from datetime import datetime, timedelta
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from ..core.task_spec import task
 
 
-def delay(
-    seconds: float,
-    name: Optional[str] = None
-):
+def delay(seconds: float, name: Optional[str] = None):
     """
     Add a delay to the workflow.
 
@@ -38,7 +35,7 @@ def delay(
             "delay_seconds": seconds,
             "delay_start": start_time,
             "delay_end": end_time,
-            "delay_actual": end_time - start_time
+            "delay_actual": end_time - start_time,
         }
 
     return _delay
@@ -48,7 +45,7 @@ def wait_until(
     target_time: str,
     time_format: str = "%Y-%m-%d %H:%M:%S",
     timezone: Optional[str] = None,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Wait until a specific time.
@@ -73,7 +70,7 @@ def wait_until(
                     "wait_success": True,
                     "wait_duration": 0,
                     "target_time": target_time,
-                    "wait_message": "Target time already passed"
+                    "wait_message": "Target time already passed",
                 }
 
             # Calculate wait duration
@@ -89,7 +86,7 @@ def wait_until(
                 "actual_duration": end_time - start_time,
                 "target_time": target_time,
                 "start_time": start_time,
-                "end_time": end_time
+                "end_time": end_time,
             }
 
         except ValueError as e:
@@ -97,7 +94,7 @@ def wait_until(
                 "wait_success": False,
                 "wait_error": f"Time parsing error: {e}",
                 "target_time": target_time,
-                "time_format": time_format
+                "time_format": time_format,
             }
 
     return _wait_until
@@ -107,7 +104,7 @@ def wait_for_condition(
     condition_expression: str,
     check_interval: float = 1.0,
     max_wait_time: Optional[float] = None,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Wait until a condition becomes true.
@@ -118,10 +115,13 @@ def wait_for_condition(
         max_wait_time: Maximum time to wait (None for no limit)
         name: Node name
     """
-    node_name = name or f"wait_for_condition"
+    node_name = name or "wait_for_condition"
 
-    @task(name=node_name, timeout_s=max_wait_time,
-          description=f"Wait for condition: {condition_expression}")
+    @task(
+        name=node_name,
+        timeout_s=max_wait_time,
+        description=f"Wait for condition: {condition_expression}",
+    )
     async def _wait_for_condition(ctx):
         start_time = time.time()
         checks = 0
@@ -131,10 +131,7 @@ def wait_for_condition(
 
             try:
                 # Evaluate condition
-                eval_context = {
-                    'ctx': ctx,
-                    '__builtins__': {}
-                }
+                eval_context = {"ctx": ctx, "__builtins__": {}}
 
                 if eval(condition_expression, eval_context):
                     end_time = time.time()
@@ -142,7 +139,7 @@ def wait_for_condition(
                         "condition_met": True,
                         "wait_duration": end_time - start_time,
                         "condition_checks": checks,
-                        "condition_expression": condition_expression
+                        "condition_expression": condition_expression,
                     }
 
             except Exception as e:
@@ -150,7 +147,7 @@ def wait_for_condition(
                     "condition_met": False,
                     "condition_error": f"Condition evaluation error: {e}",
                     "condition_expression": condition_expression,
-                    "condition_checks": checks
+                    "condition_checks": checks,
                 }
 
             # Check timeout
@@ -160,7 +157,7 @@ def wait_for_condition(
                     "condition_timeout": True,
                     "wait_duration": time.time() - start_time,
                     "condition_checks": checks,
-                    "condition_expression": condition_expression
+                    "condition_expression": condition_expression,
                 }
 
             await asyncio.sleep(check_interval)
@@ -168,11 +165,7 @@ def wait_for_condition(
     return _wait_for_condition
 
 
-def timeout_wrapper(
-    wrapped_task,
-    timeout_seconds: float,
-    name: Optional[str] = None
-):
+def timeout_wrapper(wrapped_task, timeout_seconds: float, name: Optional[str] = None):
     """
     Wrap a task with a timeout.
 
@@ -190,21 +183,26 @@ def timeout_wrapper(
         try:
             # Execute wrapped task with timeout
             result = await asyncio.wait_for(
-                wrapped_task.spec.fn(ctx) if asyncio.iscoroutinefunction(wrapped_task.spec.fn)
-                else asyncio.to_thread(wrapped_task.spec.fn, ctx),
-                timeout=timeout_seconds
+                (
+                    wrapped_task.spec.fn(ctx)
+                    if asyncio.iscoroutinefunction(wrapped_task.spec.fn)
+                    else asyncio.to_thread(wrapped_task.spec.fn, ctx)
+                ),
+                timeout=timeout_seconds,
             )
 
             end_time = time.time()
 
             # Merge results and add timeout info
             if isinstance(result, dict):
-                result.update({
-                    "timeout_applied": True,
-                    "timeout_seconds": timeout_seconds,
-                    "execution_time": end_time - start_time,
-                    "timed_out": False
-                })
+                result.update(
+                    {
+                        "timeout_applied": True,
+                        "timeout_seconds": timeout_seconds,
+                        "execution_time": end_time - start_time,
+                        "timed_out": False,
+                    }
+                )
                 return result
             else:
                 return {
@@ -212,7 +210,7 @@ def timeout_wrapper(
                     "timeout_applied": True,
                     "timeout_seconds": timeout_seconds,
                     "execution_time": end_time - start_time,
-                    "timed_out": False
+                    "timed_out": False,
                 }
 
         except asyncio.TimeoutError:
@@ -222,16 +220,14 @@ def timeout_wrapper(
                 "timeout_seconds": timeout_seconds,
                 "execution_time": end_time - start_time,
                 "timed_out": True,
-                "timeout_error": f"Task timed out after {timeout_seconds} seconds"
+                "timeout_error": f"Task timed out after {timeout_seconds} seconds",
             }
 
     return _timeout_wrapper
 
 
 def rate_limit(
-    calls_per_second: float,
-    burst_size: int = 1,
-    name: Optional[str] = None
+    calls_per_second: float, burst_size: int = 1, name: Optional[str] = None
 ):
     """
     Rate limit task execution using token bucket algorithm.
@@ -244,10 +240,7 @@ def rate_limit(
     node_name = name or f"rate_limit_{calls_per_second}cps"
 
     # Shared state for rate limiting (in real implementation, would use Redis or similar)
-    _bucket_state = {
-        "tokens": burst_size,
-        "last_update": time.time()
-    }
+    _bucket_state = {"tokens": burst_size, "last_update": time.time()}
 
     @task(name=node_name, description=f"Rate limit: {calls_per_second} calls/sec")
     async def _rate_limit(ctx):
@@ -256,7 +249,9 @@ def rate_limit(
         # Add tokens based on time elapsed
         time_passed = current_time - _bucket_state["last_update"]
         tokens_to_add = time_passed * calls_per_second
-        _bucket_state["tokens"] = min(burst_size, _bucket_state["tokens"] + tokens_to_add)
+        _bucket_state["tokens"] = min(
+            burst_size, _bucket_state["tokens"] + tokens_to_add
+        )
         _bucket_state["last_update"] = current_time
 
         if _bucket_state["tokens"] >= 1:
@@ -265,7 +260,7 @@ def rate_limit(
             return {
                 "rate_limited": False,
                 "tokens_remaining": _bucket_state["tokens"],
-                "calls_per_second": calls_per_second
+                "calls_per_second": calls_per_second,
             }
         else:
             # Need to wait for next token
@@ -279,7 +274,7 @@ def rate_limit(
                 "rate_limited": True,
                 "wait_time": wait_time,
                 "tokens_remaining": 0,
-                "calls_per_second": calls_per_second
+                "calls_per_second": calls_per_second,
             }
 
     return _rate_limit
@@ -288,7 +283,7 @@ def rate_limit(
 def schedule_at(
     schedule_time: str,
     time_format: str = "%Y-%m-%d %H:%M:%S",
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Schedule task execution at specific time.
@@ -311,7 +306,7 @@ def schedule_at(
                 return {
                     "schedule_success": False,
                     "schedule_error": "Schedule time is in the past",
-                    "schedule_time": schedule_time
+                    "schedule_time": schedule_time,
                 }
 
             # Calculate wait duration
@@ -324,7 +319,7 @@ def schedule_at(
                 "schedule_success": True,
                 "scheduled_time": schedule_time,
                 "actual_execution_time": datetime.now().strftime(time_format),
-                "wait_duration": wait_duration
+                "wait_duration": wait_duration,
             }
 
         except ValueError as e:
@@ -332,7 +327,7 @@ def schedule_at(
                 "schedule_success": False,
                 "schedule_error": f"Time parsing error: {e}",
                 "schedule_time": schedule_time,
-                "time_format": time_format
+                "time_format": time_format,
             }
 
     return _schedule_at
@@ -344,7 +339,7 @@ def retry_with_backoff(
     initial_delay: float = 1.0,
     backoff_factor: float = 2.0,
     max_delay: float = 60.0,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Retry a task with exponential backoff.
@@ -379,18 +374,20 @@ def retry_with_backoff(
 
                 # Success - add retry info to result
                 if isinstance(result, dict):
-                    result.update({
-                        "retry_attempt": attempt + 1,
-                        "retry_successful": True,
-                        "total_retry_duration": total_duration
-                    })
+                    result.update(
+                        {
+                            "retry_attempt": attempt + 1,
+                            "retry_successful": True,
+                            "total_retry_duration": total_duration,
+                        }
+                    )
                     return result
                 else:
                     return {
                         "wrapped_result": result,
                         "retry_attempt": attempt + 1,
                         "retry_successful": True,
-                        "total_retry_duration": total_duration
+                        "total_retry_duration": total_duration,
                     }
 
             except Exception as e:
@@ -400,7 +397,7 @@ def retry_with_backoff(
 
                 if attempt < max_retries:
                     # Calculate delay for next attempt
-                    delay = min(initial_delay * (backoff_factor ** attempt), max_delay)
+                    delay = min(initial_delay * (backoff_factor**attempt), max_delay)
                     await asyncio.sleep(delay)
                     total_duration += delay
 
@@ -410,16 +407,13 @@ def retry_with_backoff(
             "retry_attempts": max_retries + 1,
             "total_retry_duration": total_duration,
             "last_error": str(last_error),
-            "max_retries": max_retries
+            "max_retries": max_retries,
         }
 
     return _retry_with_backoff
 
 
-def measure_execution_time(
-    wrapped_task,
-    name: Optional[str] = None
-):
+def measure_execution_time(wrapped_task, name: Optional[str] = None):
     """
     Measure execution time of a task.
 
@@ -429,7 +423,10 @@ def measure_execution_time(
     """
     node_name = name or f"measure_{wrapped_task.spec.name}"
 
-    @task(name=node_name, description=f"Measure execution time for {wrapped_task.spec.name}")
+    @task(
+        name=node_name,
+        description=f"Measure execution time for {wrapped_task.spec.name}",
+    )
     async def _measure_execution_time(ctx):
         start_time = time.time()
 
@@ -445,12 +442,14 @@ def measure_execution_time(
 
             # Add timing info to result
             if isinstance(result, dict):
-                result.update({
-                    "execution_time": execution_time,
-                    "start_time": start_time,
-                    "end_time": end_time,
-                    "timing_measured": True
-                })
+                result.update(
+                    {
+                        "execution_time": execution_time,
+                        "start_time": start_time,
+                        "end_time": end_time,
+                        "timing_measured": True,
+                    }
+                )
                 return result
             else:
                 return {
@@ -458,7 +457,7 @@ def measure_execution_time(
                     "execution_time": execution_time,
                     "start_time": start_time,
                     "end_time": end_time,
-                    "timing_measured": True
+                    "timing_measured": True,
                 }
 
         except Exception as e:
@@ -470,7 +469,7 @@ def measure_execution_time(
                 "start_time": start_time,
                 "end_time": end_time,
                 "timing_measured": True,
-                "execution_error": str(e)
+                "execution_error": str(e),
             }
 
     return _measure_execution_time
@@ -507,14 +506,16 @@ def daily_schedule(hour: int, minute: int = 0, second: int = 0):
         target_time += timedelta(days=1)
 
     return schedule_at(
-        target_time.strftime("%Y-%m-%d %H:%M:%S"),
-        name=f"daily_{hour:02d}_{minute:02d}"
+        target_time.strftime("%Y-%m-%d %H:%M:%S"), name=f"daily_{hour:02d}_{minute:02d}"
     )
 
 
 def timeout_after(seconds: float):
     """Create a timeout node that fails after specified seconds"""
-    @task(name=f"timeout_after_{seconds}s", description=f"Timeout after {seconds} seconds")
+
+    @task(
+        name=f"timeout_after_{seconds}s", description=f"Timeout after {seconds} seconds"
+    )
     async def _timeout_after(ctx):
         await asyncio.sleep(seconds)
         raise TimeoutError(f"Workflow timed out after {seconds} seconds")

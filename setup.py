@@ -34,6 +34,8 @@ setup(
             "black>=23.11.0",
             "flake8>=6.1.0",
             "mypy>=1.7.1",
+            "pandas-stubs>=2.2.0",
+            "types-openpyxl>=3.1.0",
         ]
     },
     entry_points={

@@ -4,19 +4,21 @@ import csv
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Optional, Union
 
 from ..core.task_spec import task
 
 # Note: pandas and openpyxl are optional dependencies for Excel support
 try:
-    import pandas as pd
+    import pandas as pd  # type: ignore[import-untyped]
+
     PANDAS_AVAILABLE = True
 except ImportError:
     PANDAS_AVAILABLE = False
 
 try:
-    import openpyxl
+    import openpyxl  # type: ignore[import-untyped]  # noqa: F401
+
     OPENPYXL_AVAILABLE = True
 except ImportError:
     OPENPYXL_AVAILABLE = False
@@ -28,7 +30,7 @@ def csv_read(
     encoding: str = "utf-8",
     has_header: bool = True,
     output_key: str = "csv_data",
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Read CSV file and convert to list of dictionaries.
@@ -50,11 +52,11 @@ def csv_read(
                 return {
                     "csv_success": False,
                     "csv_error": f"File not found: {file_path}",
-                    "file_path": file_path
+                    "file_path": file_path,
                 }
 
             data = []
-            with open(file_path, 'r', encoding=encoding, newline='') as csvfile:
+            with open(file_path, "r", encoding=encoding, newline="") as csvfile:
                 if has_header:
                     reader = csv.DictReader(csvfile, delimiter=delimiter)
                     data = list(reader)
@@ -67,14 +69,14 @@ def csv_read(
                 "csv_success": True,
                 "csv_rows": len(data),
                 "csv_file_path": file_path,
-                "csv_has_header": has_header
+                "csv_has_header": has_header,
             }
 
         except Exception as e:
             return {
                 "csv_success": False,
                 "csv_error": f"CSV read error: {e}",
-                "file_path": file_path
+                "file_path": file_path,
             }
 
     return _csv_read
@@ -86,7 +88,7 @@ def csv_write(
     delimiter: str = ",",
     encoding: str = "utf-8",
     write_header: bool = True,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Write data to CSV file.
@@ -108,23 +110,25 @@ def csv_write(
             if data is None:
                 return {
                     "csv_success": False,
-                    "csv_error": f"No data found in context key: {data_key}"
+                    "csv_error": f"No data found in context key: {data_key}",
                 }
 
             if not isinstance(data, list) or not data:
                 return {
                     "csv_success": False,
-                    "csv_error": "Data must be a non-empty list"
+                    "csv_error": "Data must be a non-empty list",
                 }
 
             # Ensure output directory exists
             Path(file_path).parent.mkdir(parents=True, exist_ok=True)
 
-            with open(file_path, 'w', encoding=encoding, newline='') as csvfile:
+            with open(file_path, "w", encoding=encoding, newline="") as csvfile:
                 if isinstance(data[0], dict):
                     # Write dictionary data
                     fieldnames = data[0].keys()
-                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter=delimiter)
+                    writer = csv.DictWriter(
+                        csvfile, fieldnames=fieldnames, delimiter=delimiter
+                    )
 
                     if write_header:
                         writer.writeheader()
@@ -138,14 +142,14 @@ def csv_write(
                 "csv_success": True,
                 "csv_file_path": file_path,
                 "csv_rows_written": len(data),
-                "csv_write_header": write_header
+                "csv_write_header": write_header,
             }
 
         except Exception as e:
             return {
                 "csv_success": False,
                 "csv_error": f"CSV write error: {e}",
-                "file_path": file_path
+                "file_path": file_path,
             }
 
     return _csv_write
@@ -156,7 +160,7 @@ def excel_read(
     sheet_name: Union[str, int] = 0,
     has_header: bool = True,
     output_key: str = "excel_data",
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Read Excel file and convert to list of dictionaries.
@@ -178,20 +182,20 @@ def excel_read(
             if not PANDAS_AVAILABLE:
                 return {
                     "excel_success": False,
-                    "excel_error": "pandas is required for Excel operations. Install with: pip install pandas"
+                    "excel_error": "pandas is required for Excel operations. Install with: pip install pandas",
                 }
 
             if not OPENPYXL_AVAILABLE:
                 return {
                     "excel_success": False,
-                    "excel_error": "openpyxl is required for Excel operations. Install with: pip install openpyxl"
+                    "excel_error": "openpyxl is required for Excel operations. Install with: pip install openpyxl",
                 }
 
             if not os.path.exists(file_path):
                 return {
                     "excel_success": False,
                     "excel_error": f"File not found: {file_path}",
-                    "file_path": file_path
+                    "file_path": file_path,
                 }
 
             # Read Excel file
@@ -200,7 +204,7 @@ def excel_read(
 
             # Convert to list of dictionaries
             if has_header:
-                data = df.to_dict('records')
+                data = df.to_dict("records")
             else:
                 data = df.values.tolist()
 
@@ -211,14 +215,14 @@ def excel_read(
                 "excel_columns": len(df.columns),
                 "excel_file_path": file_path,
                 "excel_sheet_name": sheet_name,
-                "excel_has_header": has_header
+                "excel_has_header": has_header,
             }
 
         except Exception as e:
             return {
                 "excel_success": False,
                 "excel_error": f"Excel read error: {e}",
-                "file_path": file_path
+                "file_path": file_path,
             }
 
     return _excel_read
@@ -229,7 +233,7 @@ def excel_write(
     file_path: str = "output.xlsx",
     sheet_name: str = "Sheet1",
     write_header: bool = True,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Write data to Excel file.
@@ -251,26 +255,26 @@ def excel_write(
             if not PANDAS_AVAILABLE:
                 return {
                     "excel_success": False,
-                    "excel_error": "pandas is required for Excel operations. Install with: pip install pandas"
+                    "excel_error": "pandas is required for Excel operations. Install with: pip install pandas",
                 }
 
             if not OPENPYXL_AVAILABLE:
                 return {
                     "excel_success": False,
-                    "excel_error": "openpyxl is required for Excel operations. Install with: pip install openpyxl"
+                    "excel_error": "openpyxl is required for Excel operations. Install with: pip install openpyxl",
                 }
 
             data = ctx.get(data_key)
             if data is None:
                 return {
                     "excel_success": False,
-                    "excel_error": f"No data found in context key: {data_key}"
+                    "excel_error": f"No data found in context key: {data_key}",
                 }
 
             if not isinstance(data, list) or not data:
                 return {
                     "excel_success": False,
-                    "excel_error": "Data must be a non-empty list"
+                    "excel_error": "Data must be a non-empty list",
                 }
 
             # Ensure output directory exists
@@ -280,7 +284,9 @@ def excel_write(
             df = pd.DataFrame(data)
 
             # Write to Excel
-            df.to_excel(file_path, sheet_name=sheet_name, index=False, header=write_header)
+            df.to_excel(
+                file_path, sheet_name=sheet_name, index=False, header=write_header
+            )
 
             return {
                 "excel_success": True,
@@ -288,14 +294,14 @@ def excel_write(
                 "excel_sheet_name": sheet_name,
                 "excel_rows_written": len(data),
                 "excel_columns_written": len(df.columns),
-                "excel_write_header": write_header
+                "excel_write_header": write_header,
             }
 
         except Exception as e:
             return {
                 "excel_success": False,
                 "excel_error": f"Excel write error: {e}",
-                "file_path": file_path
+                "file_path": file_path,
             }
 
     return _excel_write
@@ -306,7 +312,7 @@ def json_to_csv(
     output_file: str = "output.csv",
     flatten_nested: bool = False,
     delimiter: str = ",",
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Convert JSON data to CSV format.
@@ -327,19 +333,19 @@ def json_to_csv(
             if data is None:
                 return {
                     "conversion_success": False,
-                    "conversion_error": f"No data found in context key: {data_key}"
+                    "conversion_error": f"No data found in context key: {data_key}",
                 }
 
             if not isinstance(data, list):
                 return {
                     "conversion_success": False,
-                    "conversion_error": "Data must be a list of objects for CSV conversion"
+                    "conversion_error": "Data must be a list of objects for CSV conversion",
                 }
 
             if not data:
                 return {
                     "conversion_success": False,
-                    "conversion_error": "Data list is empty"
+                    "conversion_error": "Data list is empty",
                 }
 
             # Flatten nested objects if requested
@@ -358,10 +364,12 @@ def json_to_csv(
             Path(output_file).parent.mkdir(parents=True, exist_ok=True)
 
             # Write CSV
-            with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
+            with open(output_file, "w", newline="", encoding="utf-8") as csvfile:
                 if isinstance(data[0], dict):
                     fieldnames = data[0].keys()
-                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter=delimiter)
+                    writer = csv.DictWriter(
+                        csvfile, fieldnames=fieldnames, delimiter=delimiter
+                    )
                     writer.writeheader()
                     writer.writerows(data)
                 else:
@@ -372,14 +380,14 @@ def json_to_csv(
                 "conversion_success": True,
                 "output_file": output_file,
                 "rows_converted": len(data),
-                "flattened": flatten_nested
+                "flattened": flatten_nested,
             }
 
         except Exception as e:
             return {
                 "conversion_success": False,
                 "conversion_error": f"JSON to CSV conversion error: {e}",
-                "output_file": output_file
+                "output_file": output_file,
             }
 
     return _json_to_csv
@@ -390,7 +398,7 @@ def csv_to_json(
     output_file: Optional[str] = None,
     output_key: str = "json_data",
     delimiter: str = ",",
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Convert CSV file to JSON format.
@@ -411,12 +419,12 @@ def csv_to_json(
                 return {
                     "conversion_success": False,
                     "conversion_error": f"File not found: {file_path}",
-                    "file_path": file_path
+                    "file_path": file_path,
                 }
 
             # Read CSV
             data = []
-            with open(file_path, 'r', encoding='utf-8', newline='') as csvfile:
+            with open(file_path, "r", encoding="utf-8", newline="") as csvfile:
                 reader = csv.DictReader(csvfile, delimiter=delimiter)
                 data = list(reader)
 
@@ -424,13 +432,13 @@ def csv_to_json(
                 output_key: data,
                 "conversion_success": True,
                 "rows_converted": len(data),
-                "input_file": file_path
+                "input_file": file_path,
             }
 
             # Write JSON file if requested
             if output_file:
                 Path(output_file).parent.mkdir(parents=True, exist_ok=True)
-                with open(output_file, 'w', encoding='utf-8') as jsonfile:
+                with open(output_file, "w", encoding="utf-8") as jsonfile:
                     json.dump(data, jsonfile, indent=2, ensure_ascii=False)
                 result["output_file"] = output_file
 
@@ -440,7 +448,7 @@ def csv_to_json(
             return {
                 "conversion_success": False,
                 "conversion_error": f"CSV to JSON conversion error: {e}",
-                "file_path": file_path
+                "file_path": file_path,
             }
 
     return _csv_to_json
@@ -451,7 +459,7 @@ def excel_to_json(
     sheet_name: Union[str, int] = 0,
     output_file: Optional[str] = None,
     output_key: str = "json_data",
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Convert Excel file to JSON format.
@@ -473,38 +481,38 @@ def excel_to_json(
             if not PANDAS_AVAILABLE:
                 return {
                     "conversion_success": False,
-                    "conversion_error": "pandas is required for Excel operations. Install with: pip install pandas"
+                    "conversion_error": "pandas is required for Excel operations. Install with: pip install pandas",
                 }
 
             if not OPENPYXL_AVAILABLE:
                 return {
                     "conversion_success": False,
-                    "conversion_error": "openpyxl is required for Excel operations. Install with: pip install openpyxl"
+                    "conversion_error": "openpyxl is required for Excel operations. Install with: pip install openpyxl",
                 }
 
             if not os.path.exists(file_path):
                 return {
                     "conversion_success": False,
                     "conversion_error": f"File not found: {file_path}",
-                    "file_path": file_path
+                    "file_path": file_path,
                 }
 
             # Read Excel
             df = pd.read_excel(file_path, sheet_name=sheet_name)
-            data = df.to_dict('records')
+            data = df.to_dict("records")
 
             result = {
                 output_key: data,
                 "conversion_success": True,
                 "rows_converted": len(data),
                 "input_file": file_path,
-                "sheet_name": sheet_name
+                "sheet_name": sheet_name,
             }
 
             # Write JSON file if requested
             if output_file:
                 Path(output_file).parent.mkdir(parents=True, exist_ok=True)
-                with open(output_file, 'w', encoding='utf-8') as jsonfile:
+                with open(output_file, "w", encoding="utf-8") as jsonfile:
                     json.dump(data, jsonfile, indent=2, ensure_ascii=False)
                 result["output_file"] = output_file
 
@@ -514,13 +522,15 @@ def excel_to_json(
             return {
                 "conversion_success": False,
                 "conversion_error": f"Excel to JSON conversion error: {e}",
-                "file_path": file_path
+                "file_path": file_path,
             }
 
     return _excel_to_json
 
 
-def _flatten_dict(nested_dict: dict, flat_dict: dict, parent_key: str = '', separator: str = '.'):
+def _flatten_dict(
+    nested_dict: dict, flat_dict: dict, parent_key: str = "", separator: str = "."
+):
     """Helper function to flatten nested dictionaries"""
     for key, value in nested_dict.items():
         new_key = f"{parent_key}{separator}{key}" if parent_key else key

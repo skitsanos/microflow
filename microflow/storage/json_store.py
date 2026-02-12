@@ -1,7 +1,6 @@
 """JSON file-based state storage for workflows"""
 
 import json
-import os
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -32,11 +31,11 @@ class JSONStateStore:
                 "started": None,
                 "finished": None,
                 "ctx": {},
-                "tasks": {}
+                "tasks": {},
             }
 
         try:
-            with open(run_file, 'r') as f:
+            with open(run_file, "r") as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError):
             # Return default structure if file is corrupted
@@ -46,7 +45,7 @@ class JSONStateStore:
                 "started": None,
                 "finished": None,
                 "ctx": {},
-                "tasks": {}
+                "tasks": {},
             }
 
     def _save_run_data(self, run_id: str, data: Dict[str, Any]) -> None:
@@ -54,9 +53,9 @@ class JSONStateStore:
         run_file = self._run_file(run_id)
         with self._lock:
             # Atomic write using temporary file
-            temp_file = run_file.with_suffix('.tmp')
+            temp_file = run_file.with_suffix(".tmp")
             try:
-                with open(temp_file, 'w') as f:
+                with open(temp_file, "w") as f:
                     json.dump(data, f, indent=2, default=str)
                 temp_file.replace(run_file)
             except Exception:
@@ -72,7 +71,7 @@ class JSONStateStore:
             "started": time.time(),
             "finished": None,
             "ctx": ctx,
-            "tasks": {}
+            "tasks": {},
         }
         self._save_run_data(run_id, data)
 
@@ -127,7 +126,7 @@ class JSONStateStore:
 
         for run_file in self.runs_dir.glob("*.json"):
             try:
-                with open(run_file, 'r') as f:
+                with open(run_file, "r") as f:
                     data = json.load(f)
                     if status is None or data.get("status") == status:
                         runs.append(data)
@@ -153,7 +152,7 @@ class JSONStateStore:
 
         for run_file in self.runs_dir.glob("*.json"):
             try:
-                with open(run_file, 'r') as f:
+                with open(run_file, "r") as f:
                     data = json.load(f)
                     started = data.get("started", 0)
                     if started < cutoff:

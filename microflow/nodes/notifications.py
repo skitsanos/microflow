@@ -1,13 +1,12 @@
 """Notification nodes for email, SMS, Slack, etc."""
 
-import asyncio
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from ..core.task_spec import task
 
@@ -28,7 +27,7 @@ def send_email(
     html_body: Optional[str] = None,
     name: Optional[str] = None,
     max_retries: int = 2,
-    backoff_s: float = 1.0
+    backoff_s: float = 1.0,
 ):
     """
     Send email notification.
@@ -59,71 +58,94 @@ def send_email(
     """
     node_name = name or "send_email"
 
-    @task(name=node_name, max_retries=max_retries, backoff_s=backoff_s,
-          description=f"Send email: {subject}")
+    @task(
+        name=node_name,
+        max_retries=max_retries,
+        backoff_s=backoff_s,
+        description=f"Send email: {subject}",
+    )
     async def _send_email(ctx):
         # Resolve dynamic values from context
         resolved_to = to_addresses
         if isinstance(to_addresses, str):
             resolved_to = to_addresses.format(**ctx)
-            resolved_to = [addr.strip() for addr in resolved_to.split(',')]
+            resolved_to = [addr.strip() for addr in resolved_to.split(",")]
         elif isinstance(to_addresses, list):
-            resolved_to = [addr.format(**ctx) if isinstance(addr, str) else addr for addr in to_addresses]
+            resolved_to = [
+                addr.format(**ctx) if isinstance(addr, str) else addr
+                for addr in to_addresses
+            ]
 
-        resolved_subject = subject.format(**ctx) if isinstance(subject, str) else subject
+        resolved_subject = (
+            subject.format(**ctx) if isinstance(subject, str) else subject
+        )
         resolved_body = body.format(**ctx) if isinstance(body, str) else body
-        resolved_from = from_address.format(**ctx) if from_address and isinstance(from_address, str) else from_address
+        resolved_from = (
+            from_address.format(**ctx)
+            if from_address and isinstance(from_address, str)
+            else from_address
+        )
 
         # Resolve CC and BCC
         resolved_cc = []
         if cc_addresses:
             if isinstance(cc_addresses, str):
-                resolved_cc = [addr.strip() for addr in cc_addresses.format(**ctx).split(',')]
+                resolved_cc = [
+                    addr.strip() for addr in cc_addresses.format(**ctx).split(",")
+                ]
             else:
                 resolved_cc = cc_addresses
 
         resolved_bcc = []
         if bcc_addresses:
             if isinstance(bcc_addresses, str):
-                resolved_bcc = [addr.strip() for addr in bcc_addresses.format(**ctx).split(',')]
+                resolved_bcc = [
+                    addr.strip() for addr in bcc_addresses.format(**ctx).split(",")
+                ]
             else:
                 resolved_bcc = bcc_addresses
 
         try:
             # Create message
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = resolved_subject
-            msg['From'] = resolved_from or username or "noreply@example.com"
-            msg['To'] = ', '.join(resolved_to)
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = resolved_subject
+            msg["From"] = resolved_from or username or "noreply@example.com"
+            msg["To"] = ", ".join(resolved_to)
 
             if resolved_cc:
-                msg['Cc'] = ', '.join(resolved_cc)
+                msg["Cc"] = ", ".join(resolved_cc)
 
             # Add body parts
             if resolved_body:
-                text_part = MIMEText(resolved_body, 'plain', 'utf-8')
+                text_part = MIMEText(resolved_body, "plain", "utf-8")
                 msg.attach(text_part)
 
             if html_body:
-                resolved_html = html_body.format(**ctx) if isinstance(html_body, str) else html_body
-                html_part = MIMEText(resolved_html, 'html', 'utf-8')
+                resolved_html = (
+                    html_body.format(**ctx) if isinstance(html_body, str) else html_body
+                )
+                html_part = MIMEText(resolved_html, "html", "utf-8")
                 msg.attach(html_part)
 
             # Add attachments
             if attachments:
                 for attachment_path in attachments:
-                    resolved_path = attachment_path.format(**ctx) if isinstance(attachment_path, str) else attachment_path
+                    resolved_path = (
+                        attachment_path.format(**ctx)
+                        if isinstance(attachment_path, str)
+                        else attachment_path
+                    )
                     path_obj = Path(resolved_path)
 
                     if path_obj.exists():
-                        with open(path_obj, 'rb') as f:
-                            part = MIMEBase('application', 'octet-stream')
+                        with open(path_obj, "rb") as f:
+                            part = MIMEBase("application", "octet-stream")
                             part.set_payload(f.read())
 
                         encoders.encode_base64(part)
                         part.add_header(
-                            'Content-Disposition',
-                            f'attachment; filename= {path_obj.name}'
+                            "Content-Disposition",
+                            f"attachment; filename= {path_obj.name}",
                         )
                         msg.attach(part)
 
@@ -149,7 +171,7 @@ def send_email(
                 "email_recipients": all_recipients,
                 "email_subject": resolved_subject,
                 "email_from": resolved_from or username,
-                "email_attachments": len(attachments) if attachments else 0
+                "email_attachments": len(attachments) if attachments else 0,
             }
 
         except Exception as e:
@@ -157,7 +179,7 @@ def send_email(
                 "email_sent": False,
                 "email_error": str(e),
                 "email_recipients": resolved_to,
-                "email_subject": resolved_subject
+                "email_subject": resolved_subject,
             }
 
     return _send_email
@@ -171,7 +193,7 @@ def slack_notification(
     icon_emoji: Optional[str] = None,
     attachments: Optional[List[Dict]] = None,
     name: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Send Slack notification via webhook.
@@ -195,15 +217,17 @@ def slack_notification(
     @task(name=node_name, description="Send Slack notification")
     async def _slack_notification(ctx):
         # Build Slack payload
-        payload = {
-            "text": text.format(**ctx) if isinstance(text, str) else text
-        }
+        payload = {"text": text.format(**ctx) if isinstance(text, str) else text}
 
         if channel:
-            payload["channel"] = channel.format(**ctx) if isinstance(channel, str) else channel
+            payload["channel"] = (
+                channel.format(**ctx) if isinstance(channel, str) else channel
+            )
 
         if username:
-            payload["username"] = username.format(**ctx) if isinstance(username, str) else username
+            payload["username"] = (
+                username.format(**ctx) if isinstance(username, str) else username
+            )
 
         if icon_emoji:
             payload["icon_emoji"] = icon_emoji
@@ -224,10 +248,7 @@ def slack_notification(
 
         # Use http_post to send the webhook
         http_task = http_post(
-            url=webhook_url,
-            json_data=payload,
-            name=node_name,
-            **kwargs
+            url=webhook_url, json_data=payload, name=node_name, **kwargs
         )
 
         result = await http_task.spec.fn(ctx)
@@ -237,8 +258,10 @@ def slack_notification(
             "slack_sent": result.get("http_success", False),
             "slack_status_code": result.get("http_status_code"),
             "slack_response": result.get("http_data"),
-            "slack_error": None if result.get("http_success") else result.get("http_data"),
-            "slack_text": payload["text"]
+            "slack_error": (
+                None if result.get("http_success") else result.get("http_data")
+            ),
+            "slack_text": payload["text"],
         }
 
     return _slack_notification
@@ -251,7 +274,7 @@ def discord_notification(
     avatar_url: Optional[str] = None,
     embeds: Optional[List[Dict]] = None,
     name: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Send Discord notification via webhook.
@@ -277,10 +300,14 @@ def discord_notification(
         }
 
         if username:
-            payload["username"] = username.format(**ctx) if isinstance(username, str) else username
+            payload["username"] = (
+                username.format(**ctx) if isinstance(username, str) else username
+            )
 
         if avatar_url:
-            payload["avatar_url"] = avatar_url.format(**ctx) if isinstance(avatar_url, str) else avatar_url
+            payload["avatar_url"] = (
+                avatar_url.format(**ctx) if isinstance(avatar_url, str) else avatar_url
+            )
 
         if embeds:
             # Resolve embeds from context
@@ -298,10 +325,7 @@ def discord_notification(
 
         # Use http_post to send the webhook
         http_task = http_post(
-            url=webhook_url,
-            json_data=payload,
-            name=node_name,
-            **kwargs
+            url=webhook_url, json_data=payload, name=node_name, **kwargs
         )
 
         result = await http_task.spec.fn(ctx)
@@ -310,8 +334,10 @@ def discord_notification(
             "discord_sent": result.get("http_success", False),
             "discord_status_code": result.get("http_status_code"),
             "discord_response": result.get("http_data"),
-            "discord_error": None if result.get("http_success") else result.get("http_data"),
-            "discord_content": payload["content"]
+            "discord_error": (
+                None if result.get("http_success") else result.get("http_data")
+            ),
+            "discord_content": payload["content"],
         }
 
     return _discord_notification
@@ -324,7 +350,7 @@ def teams_notification(
     theme_color: str = "0076D7",
     sections: Optional[List[Dict]] = None,
     name: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Send Microsoft Teams notification via webhook.
@@ -351,7 +377,7 @@ def teams_notification(
             "themeColor": theme_color,
             "summary": title.format(**ctx) if isinstance(title, str) else title,
             "title": title.format(**ctx) if isinstance(title, str) else title,
-            "text": text.format(**ctx) if isinstance(text, str) else text
+            "text": text.format(**ctx) if isinstance(text, str) else text,
         }
 
         if sections:
@@ -370,10 +396,7 @@ def teams_notification(
 
         # Use http_post to send the webhook
         http_task = http_post(
-            url=webhook_url,
-            json_data=payload,
-            name=node_name,
-            **kwargs
+            url=webhook_url, json_data=payload, name=node_name, **kwargs
         )
 
         result = await http_task.spec.fn(ctx)
@@ -382,8 +405,10 @@ def teams_notification(
             "teams_sent": result.get("http_success", False),
             "teams_status_code": result.get("http_status_code"),
             "teams_response": result.get("http_data"),
-            "teams_error": None if result.get("http_success") else result.get("http_data"),
-            "teams_title": payload["title"]
+            "teams_error": (
+                None if result.get("http_success") else result.get("http_data")
+            ),
+            "teams_title": payload["title"],
         }
 
     return _teams_notification
@@ -396,7 +421,7 @@ def sms_notification(
     service: str = "twilio",
     from_number: Optional[str] = None,
     name: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Send SMS notification (requires external SMS service).
@@ -414,16 +439,24 @@ def sms_notification(
 
     @task(name=node_name, description=f"Send SMS to {phone_number}")
     async def _sms_notification(ctx):
-        resolved_phone = phone_number.format(**ctx) if isinstance(phone_number, str) else phone_number
-        resolved_message = message.format(**ctx) if isinstance(message, str) else message
+        resolved_phone = (
+            phone_number.format(**ctx)
+            if isinstance(phone_number, str)
+            else phone_number
+        )
+        resolved_message = (
+            message.format(**ctx) if isinstance(message, str) else message
+        )
 
         if service.lower() == "twilio":
-            return await _send_twilio_sms(ctx, resolved_phone, resolved_message, api_key, from_number, **kwargs)
+            return await _send_twilio_sms(
+                ctx, resolved_phone, resolved_message, api_key, from_number, **kwargs
+            )
         else:
             return {
                 "sms_sent": False,
                 "sms_error": f"Unsupported SMS service: {service}",
-                "sms_phone": resolved_phone
+                "sms_phone": resolved_phone,
             }
 
     async def _send_twilio_sms(ctx, phone, msg, api_key, from_num, **kwargs):
@@ -437,26 +470,25 @@ def sms_notification(
             return {
                 "sms_sent": False,
                 "sms_error": "Twilio account_sid required",
-                "sms_phone": phone
+                "sms_phone": phone,
             }
 
         url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
 
         # Prepare form data
-        form_data = {
-            "To": phone,
-            "Body": msg
-        }
+        form_data = {"To": phone, "Body": msg}
 
         if from_num:
-            form_data["From"] = from_num.format(**ctx) if isinstance(from_num, str) else from_num
+            form_data["From"] = (
+                from_num.format(**ctx) if isinstance(from_num, str) else from_num
+            )
 
         # Send request
         http_task = http_post(
             url=url,
             form_data=form_data,
             auth=BasicAuth(account_sid, api_key),
-            name="twilio_sms"
+            name="twilio_sms",
         )
 
         result = await http_task.spec.fn(ctx)
@@ -465,9 +497,11 @@ def sms_notification(
             "sms_sent": result.get("http_success", False),
             "sms_status_code": result.get("http_status_code"),
             "sms_response": result.get("http_data"),
-            "sms_error": None if result.get("http_success") else result.get("http_data"),
+            "sms_error": (
+                None if result.get("http_success") else result.get("http_data")
+            ),
             "sms_phone": phone,
-            "sms_message": msg
+            "sms_message": msg,
         }
 
     return _sms_notification
@@ -481,7 +515,7 @@ def push_notification(
     api_key: str = "",
     data: Optional[Dict] = None,
     name: Optional[str] = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Send push notification to mobile devices.
@@ -508,15 +542,26 @@ def push_notification(
         if isinstance(tokens, str):
             resolved_tokens = [tokens.format(**ctx)]
         elif isinstance(tokens, list):
-            resolved_tokens = [token.format(**ctx) if isinstance(token, str) else token for token in tokens]
+            resolved_tokens = [
+                token.format(**ctx) if isinstance(token, str) else token
+                for token in tokens
+            ]
 
         if service.lower() == "fcm":
-            return await _send_fcm_notification(ctx, resolved_title, resolved_body, resolved_tokens, api_key, data, **kwargs)
+            return await _send_fcm_notification(
+                ctx,
+                resolved_title,
+                resolved_body,
+                resolved_tokens,
+                api_key,
+                data,
+                **kwargs,
+            )
         else:
             return {
                 "push_sent": False,
                 "push_error": f"Unsupported push service: {service}",
-                "push_tokens": resolved_tokens
+                "push_tokens": resolved_tokens,
             }
 
     async def _send_fcm_notification(ctx, title, body, tokens, api_key, data, **kwargs):
@@ -526,12 +571,7 @@ def push_notification(
         url = "https://fcm.googleapis.com/fcm/send"
 
         # Build FCM payload
-        payload = {
-            "notification": {
-                "title": title,
-                "body": body
-            }
-        }
+        payload = {"notification": {"title": title, "body": body}}
 
         if data:
             resolved_data = {}
@@ -551,10 +591,7 @@ def push_notification(
             payload["to"] = token
 
             http_task = http_post(
-                url=url,
-                json_data=payload,
-                auth=BearerAuth(api_key),
-                name="fcm_push"
+                url=url, json_data=payload, auth=BearerAuth(api_key), name="fcm_push"
             )
 
             result = await http_task.spec.fn(ctx)
@@ -572,7 +609,7 @@ def push_notification(
             "push_total_tokens": len(tokens),
             "push_responses": responses,
             "push_title": title,
-            "push_body": body
+            "push_body": body,
         }
 
     return _push_notification
@@ -582,11 +619,7 @@ def push_notification(
 def simple_email(to: str, subject: str, body: str, **kwargs):
     """Simple email notification with minimal configuration"""
     return send_email(
-        to_addresses=to,
-        subject=subject,
-        body=body,
-        name="simple_email",
-        **kwargs
+        to_addresses=to, subject=subject, body=body, name="simple_email", **kwargs
     )
 
 
@@ -609,23 +642,21 @@ This is an automated alert from Microflow.
         subject=subject,
         body=body,
         name=f"alert_email_{severity.lower()}",
-        **kwargs
+        **kwargs,
     )
 
 
-def success_notification(webhook_url: str, message: str = "Workflow completed successfully"):
+def success_notification(
+    webhook_url: str, message: str = "Workflow completed successfully"
+):
     """Success notification to Slack/Teams"""
     return slack_notification(
-        webhook_url=webhook_url,
-        text=f"✅ {message}",
-        name="success_notification"
+        webhook_url=webhook_url, text=f"✅ {message}", name="success_notification"
     )
 
 
 def error_notification(webhook_url: str, error_message: str = "Workflow failed"):
     """Error notification to Slack/Teams"""
     return slack_notification(
-        webhook_url=webhook_url,
-        text=f"❌ {error_message}",
-        name="error_notification"
+        webhook_url=webhook_url, text=f"❌ {error_message}", name="error_notification"
     )

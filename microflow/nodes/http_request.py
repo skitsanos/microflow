@@ -1,25 +1,26 @@
 """HTTP Request node for making web API calls"""
 
-import asyncio
-import json
 from typing import Any, Callable, Dict, Optional, Union
 from urllib.parse import urljoin
 
+from ..core.task_spec import task
+
+httpx: Any = None
 try:
     import httpx
 except ImportError:
-    httpx = None
-
-from ..core.task_spec import task
+    pass
 
 
 class HTTPAuth:
     """Base class for HTTP authentication"""
+
     pass
 
 
 class BearerAuth(HTTPAuth):
     """Bearer token authentication"""
+
     def __init__(self, token: str):
         self.token = token
 
@@ -29,18 +30,23 @@ class BearerAuth(HTTPAuth):
 
 class BasicAuth(HTTPAuth):
     """Basic authentication"""
+
     def __init__(self, username: str, password: str):
         self.username = username
         self.password = password
 
     def apply(self, headers: Dict[str, str]):
         import base64
-        credentials = base64.b64encode(f"{self.username}:{self.password}".encode()).decode()
+
+        credentials = base64.b64encode(
+            f"{self.username}:{self.password}".encode()
+        ).decode()
         headers["Authorization"] = f"Basic {credentials}"
 
 
 class APIKeyAuth(HTTPAuth):
     """API Key authentication"""
+
     def __init__(self, api_key: str, header_name: str = "X-API-Key"):
         self.api_key = api_key
         self.header_name = header_name
@@ -54,7 +60,9 @@ def http_request(
     method: str = "GET",
     headers: Optional[Dict[str, str]] = None,
     params: Optional[Dict[str, Any]] = None,
-    json_data: Optional[Dict[str, Any]] = None,
+    json_data: Optional[
+        Union[Dict[str, Any], Callable[[Dict[str, Any]], Dict[str, Any]]]
+    ] = None,
     form_data: Optional[Dict[str, Any]] = None,
     auth: Optional[HTTPAuth] = None,
     timeout: float = 30.0,
@@ -63,7 +71,7 @@ def http_request(
     response_format: str = "json",  # "json", "text", "raw"
     name: Optional[str] = None,
     max_retries: int = 0,
-    backoff_s: float = 1.0
+    backoff_s: float = 1.0,
 ):
     """
     Create an HTTP request node.
@@ -91,12 +99,20 @@ def http_request(
         - http_success: Boolean indicating if request was successful
     """
     if httpx is None:
-        raise ImportError("httpx is required for HTTP requests. Install with: pip install httpx")
+        raise ImportError(
+            "httpx is required for HTTP requests. Install with: pip install httpx"
+        )
 
-    node_name = name or f"http_{method.lower()}_{url if isinstance(url, str) else 'dynamic'}"
+    node_name = (
+        name or f"http_{method.lower()}_{url if isinstance(url, str) else 'dynamic'}"
+    )
 
-    @task(name=node_name, max_retries=max_retries, backoff_s=backoff_s,
-          description=f"HTTP {method} request")
+    @task(
+        name=node_name,
+        max_retries=max_retries,
+        backoff_s=backoff_s,
+        description=f"HTTP {method} request",
+    )
     async def _http_request(ctx):
         # Resolve URL
         if callable(url):
@@ -124,22 +140,23 @@ def http_request(
                 else:
                     resolved_params[key] = value
 
-        # Resolve dynamic JSON data
+        # Resolve JSON payload (supports dict values sourced from context or a builder callable)
         resolved_json = None
         if json_data:
-            resolved_json = {}
-            for key, value in json_data.items():
-                if isinstance(value, str) and value.startswith("ctx."):
-                    ctx_key = value[4:]
-                    resolved_json[key] = ctx.get(ctx_key)
-                else:
-                    resolved_json[key] = value
+            if callable(json_data):
+                resolved_json = json_data(ctx)
+            else:
+                resolved_json = {}
+                for key, value in json_data.items():
+                    if isinstance(value, str) and value.startswith("ctx."):
+                        ctx_key = value[4:]
+                        resolved_json[key] = ctx.get(ctx_key)
+                    else:
+                        resolved_json[key] = value
 
         # Make the request
         async with httpx.AsyncClient(
-            timeout=timeout,
-            follow_redirects=follow_redirects,
-            verify=verify_ssl
+            timeout=timeout, follow_redirects=follow_redirects, verify=verify_ssl
         ) as client:
 
             response = await client.request(
@@ -148,7 +165,7 @@ def http_request(
                 headers=request_headers,
                 params=resolved_params,
                 json=resolved_json,
-                data=form_data
+                data=form_data,
             )
 
             # Parse response based on format
@@ -171,7 +188,7 @@ def http_request(
                 "http_headers": dict(response.headers),
                 "http_data": response_data,
                 "http_success": is_success,
-                "http_url": str(response.url)
+                "http_url": str(response.url),
             }
 
     return _http_request
@@ -183,12 +200,24 @@ def http_get(url: str, **kwargs):
     return http_request(url, method="GET", **kwargs)
 
 
-def http_post(url: str, json_data: Optional[Dict] = None, **kwargs):
+def http_post(
+    url: Union[str, Callable[[Dict[str, Any]], str]],
+    json_data: Optional[
+        Union[Dict[str, Any], Callable[[Dict[str, Any]], Dict[str, Any]]]
+    ] = None,
+    **kwargs,
+):
     """Create a POST request node"""
     return http_request(url, method="POST", json_data=json_data, **kwargs)
 
 
-def http_put(url: str, json_data: Optional[Dict] = None, **kwargs):
+def http_put(
+    url: Union[str, Callable[[Dict[str, Any]], str]],
+    json_data: Optional[
+        Union[Dict[str, Any], Callable[[Dict[str, Any]], Dict[str, Any]]]
+    ] = None,
+    **kwargs,
+):
     """Create a PUT request node"""
     return http_request(url, method="PUT", json_data=json_data, **kwargs)
 
@@ -201,7 +230,7 @@ def http_delete(url: str, **kwargs):
 def webhook_call(
     webhook_url: Union[str, Callable[[Dict[str, Any]], str]],
     payload_keys: Optional[list] = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Create a webhook call node that sends context data as JSON payload.
@@ -210,6 +239,7 @@ def webhook_call(
         webhook_url: Webhook endpoint URL
         payload_keys: List of context keys to include in payload (all if None)
     """
+
     def build_payload(ctx):
         if payload_keys:
             return {key: ctx.get(key) for key in payload_keys}
@@ -221,7 +251,7 @@ def webhook_call(
         webhook_url,
         json_data=lambda ctx: build_payload(ctx),
         name="webhook_call",
-        **kwargs
+        **kwargs,
     )
 
 
@@ -230,7 +260,7 @@ def rest_api_call(
     endpoint: str,
     method: str = "GET",
     auth: Optional[HTTPAuth] = None,
-    **kwargs
+    **kwargs,
 ):
     """
     Create a REST API call node.

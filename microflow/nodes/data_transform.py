@@ -1,11 +1,10 @@
 """Data transformation nodes for JSON, CSV, XML, and other formats"""
 
-import asyncio
 import csv
 import io
 import json
 import xml.etree.ElementTree as ET
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from ..core.task_spec import task
 
@@ -13,7 +12,7 @@ from ..core.task_spec import task
 def json_parse(
     json_key: str = "json_string",
     output_key: str = "parsed_data",
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Parse JSON string from context.
@@ -31,7 +30,7 @@ def json_parse(
         if json_string is None:
             return {
                 "json_parsed": False,
-                "json_error": f"No data found in context key: {json_key}"
+                "json_error": f"No data found in context key: {json_key}",
             }
 
         try:
@@ -39,14 +38,11 @@ def json_parse(
             return {
                 output_key: parsed_data,
                 "json_parsed": True,
-                "json_type": type(parsed_data).__name__
+                "json_type": type(parsed_data).__name__,
             }
 
         except json.JSONDecodeError as e:
-            return {
-                "json_parsed": False,
-                "json_error": f"JSON decode error: {e}"
-            }
+            return {"json_parsed": False, "json_error": f"JSON decode error: {e}"}
 
     return _json_parse
 
@@ -56,7 +52,7 @@ def json_stringify(
     output_key: str = "json_string",
     indent: Optional[int] = None,
     ensure_ascii: bool = False,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Convert data to JSON string.
@@ -76,7 +72,7 @@ def json_stringify(
         if data is None:
             return {
                 "json_serialized": False,
-                "json_error": f"No data found in context key: {data_key}"
+                "json_error": f"No data found in context key: {data_key}",
             }
 
         try:
@@ -84,13 +80,13 @@ def json_stringify(
             return {
                 output_key: json_string,
                 "json_serialized": True,
-                "json_length": len(json_string)
+                "json_length": len(json_string),
             }
 
         except (TypeError, ValueError) as e:
             return {
                 "json_serialized": False,
-                "json_error": f"JSON serialization error: {e}"
+                "json_error": f"JSON serialization error: {e}",
             }
 
     return _json_stringify
@@ -101,7 +97,7 @@ def json_query(
     data_key: str = "data",
     output_key: str = "query_result",
     default_value: Any = None,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Query JSON data using dot notation path.
@@ -121,13 +117,13 @@ def json_query(
         if data is None:
             return {
                 "query_success": False,
-                "query_error": f"No data found in context key: {data_key}"
+                "query_error": f"No data found in context key: {data_key}",
             }
 
         try:
             # Navigate through the path
             current = data
-            path_parts = query_path.split('.')
+            path_parts = query_path.split(".")
 
             for part in path_parts:
                 if isinstance(current, dict):
@@ -148,7 +144,7 @@ def json_query(
                 output_key: result,
                 "query_success": True,
                 "query_path": query_path,
-                "query_found": current is not None
+                "query_found": current is not None,
             }
 
         except (KeyError, IndexError, TypeError) as e:
@@ -156,7 +152,7 @@ def json_query(
                 output_key: default_value,
                 "query_success": False,
                 "query_error": f"Query error: {e}",
-                "query_path": query_path
+                "query_path": query_path,
             }
 
     return _json_query
@@ -167,7 +163,7 @@ def csv_parse(
     output_key: str = "csv_data",
     delimiter: str = ",",
     has_header: bool = True,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Parse CSV string into list of dictionaries.
@@ -187,7 +183,7 @@ def csv_parse(
         if csv_string is None:
             return {
                 "csv_parsed": False,
-                "csv_error": f"No data found in context key: {csv_key}"
+                "csv_error": f"No data found in context key: {csv_key}",
             }
 
         try:
@@ -200,7 +196,7 @@ def csv_parse(
                     output_key: [],
                     "csv_parsed": True,
                     "csv_rows": 0,
-                    "csv_columns": 0
+                    "csv_columns": 0,
                 }
 
             if has_header:
@@ -215,14 +211,11 @@ def csv_parse(
                 "csv_parsed": True,
                 "csv_rows": len(parsed_data),
                 "csv_columns": len(rows[0]) if rows else 0,
-                "csv_headers": headers if has_header else None
+                "csv_headers": headers if has_header else None,
             }
 
         except Exception as e:
-            return {
-                "csv_parsed": False,
-                "csv_error": f"CSV parse error: {e}"
-            }
+            return {"csv_parsed": False, "csv_error": f"CSV parse error: {e}"}
 
     return _csv_parse
 
@@ -232,7 +225,7 @@ def csv_generate(
     output_key: str = "csv_string",
     delimiter: str = ",",
     include_header: bool = True,
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Generate CSV string from list of dictionaries.
@@ -252,21 +245,17 @@ def csv_generate(
         if data is None:
             return {
                 "csv_generated": False,
-                "csv_error": f"No data found in context key: {data_key}"
+                "csv_error": f"No data found in context key: {data_key}",
             }
 
         if not isinstance(data, list):
             return {
                 "csv_generated": False,
-                "csv_error": "Data must be a list of dictionaries"
+                "csv_error": "Data must be a list of dictionaries",
             }
 
         if not data:
-            return {
-                output_key: "",
-                "csv_generated": True,
-                "csv_rows": 0
-            }
+            return {output_key: "", "csv_generated": True, "csv_rows": 0}
 
         try:
             output = io.StringIO()
@@ -274,7 +263,9 @@ def csv_generate(
             if isinstance(data[0], dict):
                 # List of dictionaries
                 fieldnames = data[0].keys()
-                writer = csv.DictWriter(output, fieldnames=fieldnames, delimiter=delimiter)
+                writer = csv.DictWriter(
+                    output, fieldnames=fieldnames, delimiter=delimiter
+                )
 
                 if include_header:
                     writer.writeheader()
@@ -291,14 +282,11 @@ def csv_generate(
                 output_key: csv_string,
                 "csv_generated": True,
                 "csv_rows": len(data),
-                "csv_length": len(csv_string)
+                "csv_length": len(csv_string),
             }
 
         except Exception as e:
-            return {
-                "csv_generated": False,
-                "csv_error": f"CSV generation error: {e}"
-            }
+            return {"csv_generated": False, "csv_error": f"CSV generation error: {e}"}
 
     return _csv_generate
 
@@ -306,7 +294,7 @@ def csv_generate(
 def xml_parse(
     xml_key: str = "xml_string",
     output_key: str = "xml_data",
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Parse XML string into dictionary structure.
@@ -324,14 +312,14 @@ def xml_parse(
 
         # Add attributes
         if element.attrib:
-            result['@attributes'] = element.attrib
+            result["@attributes"] = element.attrib
 
         # Add text content
         if element.text and element.text.strip():
             if len(element) == 0:  # No child elements
                 return element.text.strip()
             else:
-                result['#text'] = element.text.strip()
+                result["#text"] = element.text.strip()
 
         # Add child elements
         for child in element:
@@ -353,7 +341,7 @@ def xml_parse(
         if xml_string is None:
             return {
                 "xml_parsed": False,
-                "xml_error": f"No data found in context key: {xml_key}"
+                "xml_error": f"No data found in context key: {xml_key}",
             }
 
         try:
@@ -363,14 +351,11 @@ def xml_parse(
             return {
                 output_key: parsed_data,
                 "xml_parsed": True,
-                "xml_root_tag": root.tag
+                "xml_root_tag": root.tag,
             }
 
         except ET.ParseError as e:
-            return {
-                "xml_parsed": False,
-                "xml_error": f"XML parse error: {e}"
-            }
+            return {"xml_parsed": False, "xml_error": f"XML parse error: {e}"}
 
     return _xml_parse
 
@@ -379,7 +364,7 @@ def data_filter(
     filter_condition: str,
     data_key: str = "data",
     output_key: str = "filtered_data",
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Filter list of items based on condition.
@@ -398,24 +383,17 @@ def data_filter(
         if data is None:
             return {
                 "filter_success": False,
-                "filter_error": f"No data found in context key: {data_key}"
+                "filter_error": f"No data found in context key: {data_key}",
             }
 
         if not isinstance(data, list):
-            return {
-                "filter_success": False,
-                "filter_error": "Data must be a list"
-            }
+            return {"filter_success": False, "filter_error": "Data must be a list"}
 
         try:
             filtered_items = []
             for item in data:
                 # Create safe evaluation context
-                eval_context = {
-                    'item': item,
-                    'ctx': ctx,
-                    '__builtins__': {}
-                }
+                eval_context = {"item": item, "ctx": ctx, "__builtins__": {}}
 
                 if eval(filter_condition, eval_context):
                     filtered_items.append(item)
@@ -425,14 +403,14 @@ def data_filter(
                 "filter_success": True,
                 "original_count": len(data),
                 "filtered_count": len(filtered_items),
-                "filter_condition": filter_condition
+                "filter_condition": filter_condition,
             }
 
         except Exception as e:
             return {
                 "filter_success": False,
                 "filter_error": f"Filter error: {e}",
-                "filter_condition": filter_condition
+                "filter_condition": filter_condition,
             }
 
     return _data_filter
@@ -442,7 +420,7 @@ def data_transform(
     transform_expression: str,
     data_key: str = "data",
     output_key: str = "transformed_data",
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Transform list of items using expression.
@@ -461,24 +439,20 @@ def data_transform(
         if data is None:
             return {
                 "transform_success": False,
-                "transform_error": f"No data found in context key: {data_key}"
+                "transform_error": f"No data found in context key: {data_key}",
             }
 
         if not isinstance(data, list):
             return {
                 "transform_success": False,
-                "transform_error": "Data must be a list"
+                "transform_error": "Data must be a list",
             }
 
         try:
             transformed_items = []
             for item in data:
                 # Create safe evaluation context
-                eval_context = {
-                    'item': item,
-                    'ctx': ctx,
-                    '__builtins__': {}
-                }
+                eval_context = {"item": item, "ctx": ctx, "__builtins__": {}}
 
                 transformed_item = eval(transform_expression, eval_context)
                 transformed_items.append(transformed_item)
@@ -487,14 +461,14 @@ def data_transform(
                 output_key: transformed_items,
                 "transform_success": True,
                 "item_count": len(transformed_items),
-                "transform_expression": transform_expression
+                "transform_expression": transform_expression,
             }
 
         except Exception as e:
             return {
                 "transform_success": False,
                 "transform_error": f"Transform error: {e}",
-                "transform_expression": transform_expression
+                "transform_expression": transform_expression,
             }
 
     return _data_transform
@@ -503,9 +477,9 @@ def data_transform(
 def data_aggregate(
     data_key: str = "data",
     group_by: Optional[str] = None,
-    aggregations: Dict[str, str] = None,
+    aggregations: Optional[Dict[str, str]] = None,
     output_key: str = "aggregated_data",
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Aggregate data with grouping and calculations.
@@ -529,13 +503,13 @@ def data_aggregate(
         if data is None:
             return {
                 "aggregate_success": False,
-                "aggregate_error": f"No data found in context key: {data_key}"
+                "aggregate_error": f"No data found in context key: {data_key}",
             }
 
         if not isinstance(data, list):
             return {
                 "aggregate_success": False,
-                "aggregate_error": "Data must be a list of dictionaries"
+                "aggregate_error": "Data must be a list of dictionaries",
             }
 
         if not aggregations:
@@ -563,13 +537,13 @@ def data_aggregate(
 
                     for output_field, expression in aggregations_to_use.items():
                         eval_context = {
-                            'group': group_items,
-                            'sum': sum,
-                            'len': len,
-                            'min': min,
-                            'max': max,
-                            'avg': lambda x: sum(x) / len(x) if x else 0,
-                            '__builtins__': {}
+                            "group": group_items,
+                            "sum": sum,
+                            "len": len,
+                            "min": min,
+                            "max": max,
+                            "avg": lambda x: sum(x) / len(x) if x else 0,
+                            "__builtins__": {},
                         }
 
                         try:
@@ -584,13 +558,13 @@ def data_aggregate(
                 result = {}
                 for output_field, expression in aggregations_to_use.items():
                     eval_context = {
-                        'group': data,
-                        'sum': sum,
-                        'len': len,
-                        'min': min,
-                        'max': max,
-                        'avg': lambda x: sum(x) / len(x) if x else 0,
-                        '__builtins__': {}
+                        "group": data,
+                        "sum": sum,
+                        "len": len,
+                        "min": min,
+                        "max": max,
+                        "avg": lambda x: sum(x) / len(x) if x else 0,
+                        "__builtins__": {},
                     }
 
                     try:
@@ -604,13 +578,13 @@ def data_aggregate(
                 output_key: results,
                 "aggregate_success": True,
                 "group_count": len(results),
-                "original_count": len(data)
+                "original_count": len(data),
             }
 
         except Exception as e:
             return {
                 "aggregate_success": False,
-                "aggregate_error": f"Aggregation error: {e}"
+                "aggregate_error": f"Aggregation error: {e}",
             }
 
     return _data_aggregate
@@ -621,7 +595,7 @@ def data_sort(
     data_key: str = "data",
     reverse: bool = False,
     output_key: str = "sorted_data",
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Sort list of items.
@@ -641,25 +615,20 @@ def data_sort(
         if data is None:
             return {
                 "sort_success": False,
-                "sort_error": f"No data found in context key: {data_key}"
+                "sort_error": f"No data found in context key: {data_key}",
             }
 
         if not isinstance(data, list):
-            return {
-                "sort_success": False,
-                "sort_error": "Data must be a list"
-            }
+            return {"sort_success": False, "sort_error": "Data must be a list"}
 
         try:
+
             def sort_key(item):
                 if isinstance(item, dict) and sort_by in item:
                     return item[sort_by]
                 else:
                     # Treat as expression
-                    eval_context = {
-                        'item': item,
-                        '__builtins__': {}
-                    }
+                    eval_context = {"item": item, "__builtins__": {}}
                     return eval(sort_by, eval_context)
 
             sorted_data = sorted(data, key=sort_key, reverse=reverse)
@@ -669,56 +638,71 @@ def data_sort(
                 "sort_success": True,
                 "item_count": len(sorted_data),
                 "sort_by": sort_by,
-                "sort_reverse": reverse
+                "sort_reverse": reverse,
             }
 
         except Exception as e:
             return {
                 "sort_success": False,
                 "sort_error": f"Sort error: {e}",
-                "sort_by": sort_by
+                "sort_by": sort_by,
             }
 
     return _data_sort
 
 
 # Convenience functions for common data operations
-def select_fields(data_key: str = "data", fields: List[str] = None, output_key: str = "selected_data"):
+def select_fields(
+    data_key: str = "data",
+    fields: Optional[List[str]] = None,
+    output_key: str = "selected_data",
+):
     """Select specific fields from list of dictionaries"""
     if not fields:
         fields = []
 
     expression = f"{{k: item[k] for k in {fields} if k in item}}"
-    return data_transform(expression, data_key=data_key, output_key=output_key, name=f"select_{len(fields)}_fields")
+    return data_transform(
+        expression,
+        data_key=data_key,
+        output_key=output_key,
+        name=f"select_{len(fields)}_fields",
+    )
 
 
-def rename_fields(data_key: str = "data", field_mapping: Dict[str, str] = None, output_key: str = "renamed_data"):
+def rename_fields(
+    data_key: str = "data",
+    field_mapping: Optional[Dict[str, str]] = None,
+    output_key: str = "renamed_data",
+):
     """Rename fields in list of dictionaries"""
     if not field_mapping:
         field_mapping = {}
 
     # Build expression that directly embeds the mapping
-    mapping_repr = repr(field_mapping)
-    expression = f"{{mapping.get(k, k): v for k, v in item.items()}} if isinstance(item, dict) else item"
+    expression = (
+        "{mapping.get(k, k): v for k, v in item.items()} "
+        "if isinstance(item, dict) else item"
+    )
 
     # Create the transform task with correct parameter order
-    transform_task = data_transform(expression, data_key=data_key, output_key=output_key, name="rename_fields")
+    transform_task = data_transform(
+        expression, data_key=data_key, output_key=output_key, name="rename_fields"
+    )
 
     # Override the function to inject mapping into evaluation context
-    original_fn = transform_task.spec.fn
-
     def enhanced_fn(ctx):
         data = ctx.get(data_key)
         if data is None:
             return {
                 "transform_success": False,
-                "transform_error": f"No data found in context key: {data_key}"
+                "transform_error": f"No data found in context key: {data_key}",
             }
 
         if not isinstance(data, list):
             return {
                 "transform_success": False,
-                "transform_error": "Data must be a list"
+                "transform_error": "Data must be a list",
             }
 
         try:
@@ -726,13 +710,10 @@ def rename_fields(data_key: str = "data", field_mapping: Dict[str, str] = None, 
             for item in data:
                 # Create safe evaluation context with mapping included
                 eval_context = {
-                    'item': item,
-                    'ctx': ctx,
-                    'mapping': field_mapping,
-                    '__builtins__': {
-                        'isinstance': isinstance,
-                        'dict': dict
-                    }
+                    "item": item,
+                    "ctx": ctx,
+                    "mapping": field_mapping,
+                    "__builtins__": {"isinstance": isinstance, "dict": dict},
                 }
 
                 transformed_item = eval(expression, eval_context)
@@ -742,14 +723,14 @@ def rename_fields(data_key: str = "data", field_mapping: Dict[str, str] = None, 
                 output_key: transformed_items,
                 "transform_success": True,
                 "item_count": len(transformed_items),
-                "transform_expression": expression
+                "transform_expression": expression,
             }
 
         except Exception as e:
             return {
                 "transform_success": False,
                 "transform_error": f"Transform error: {e}",
-                "transform_expression": expression
+                "transform_expression": expression,
             }
 
     transform_task.spec.fn = enhanced_fn

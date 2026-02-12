@@ -1,7 +1,8 @@
 """Conditional execution nodes (IF and SWITCH)"""
 
 import asyncio
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union
+
 from ..core.task_spec import task
 
 
@@ -9,7 +10,7 @@ def if_node(
     condition: Union[str, Callable[[Dict[str, Any]], bool]],
     name: Optional[str] = None,
     true_route: str = "true",
-    false_route: str = "false"
+    false_route: str = "false",
 ):
     """
     Create an IF node that evaluates a condition and sets routing information.
@@ -53,14 +54,14 @@ def if_node(
 
             return {
                 f"_route_{node_name}": route,
-                f"_condition_result_{node_name}": result
+                f"_condition_result_{node_name}": result,
             }
 
         except Exception as e:
             return {
                 f"_route_{node_name}": false_route,
                 f"_condition_result_{node_name}": False,
-                f"_condition_error_{node_name}": str(e)
+                f"_condition_error_{node_name}": str(e),
             }
 
     return _if_node
@@ -70,7 +71,7 @@ def switch_node(
     expression: Union[str, Callable[[Dict[str, Any]], Any]],
     cases: Dict[Any, str],
     default_route: str = "default",
-    name: Optional[str] = None
+    name: Optional[str] = None,
 ):
     """
     Create a SWITCH node that evaluates an expression and routes based on value matching.
@@ -115,24 +116,20 @@ def switch_node(
             return {
                 f"_route_{node_name}": route,
                 f"_switch_value_{node_name}": value,
-                f"_matched_case_{node_name}": value in cases
+                f"_matched_case_{node_name}": value in cases,
             }
 
         except Exception as e:
             return {
                 f"_route_{node_name}": default_route,
                 f"_switch_value_{node_name}": None,
-                f"_switch_error_{node_name}": str(e)
+                f"_switch_error_{node_name}": str(e),
             }
 
     return _switch_node
 
 
-def conditional_task(
-    route: str,
-    condition_node: Optional[str] = None,
-    **task_kwargs
-):
+def conditional_task(route: str, condition_node: Optional[str] = None, **task_kwargs):
     """
     Decorator for tasks that should only execute when a specific route is active.
 
@@ -152,9 +149,10 @@ def conditional_task(
         def handle_low_value(ctx):
             return {"message": "Low value detected"}
     """
+
     def decorator(func):
         # Check if func is already a Task
-        if hasattr(func, 'spec'):
+        if hasattr(func, "spec"):
             original_task = func
             original_fn = func.spec.fn
         else:
@@ -195,7 +193,9 @@ def conditional_task(
 # Convenience functions for common patterns
 def if_equals(key: str, value: Any, name: Optional[str] = None):
     """Create an IF node that checks if a context key equals a specific value"""
-    return if_node(f"ctx.get('{key}') == {repr(value)}", name or f"if_{key}_equals_{value}")
+    return if_node(
+        f"ctx.get('{key}') == {repr(value)}", name or f"if_{key}_equals_{value}"
+    )
 
 
 def if_greater_than(key: str, value: Union[int, float], name: Optional[str] = None):
@@ -208,6 +208,13 @@ def if_exists(key: str, name: Optional[str] = None):
     return if_node(f"bool(ctx.get('{key}'))", name or f"if_{key}_exists")
 
 
-def switch_on_key(key: str, cases: Dict[Any, str], default_route: str = "default", name: Optional[str] = None):
+def switch_on_key(
+    key: str,
+    cases: Dict[Any, str],
+    default_route: str = "default",
+    name: Optional[str] = None,
+):
     """Create a SWITCH node that switches on a context key value"""
-    return switch_node(f"ctx.get('{key}')", cases, default_route, name or f"switch_on_{key}")
+    return switch_node(
+        f"ctx.get('{key}')", cases, default_route, name or f"switch_on_{key}"
+    )
