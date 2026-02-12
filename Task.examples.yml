@@ -3,7 +3,6 @@ version: '3'
 tasks:
   basic:
     desc: Run basic example workflow
-    deps: [install]
     cmds:
       - |
         . {{.VENV_DIR}}/bin/activate
@@ -11,7 +10,6 @@ tasks:
 
   n8n:
     desc: Run n8n-style nodes example
-    deps: [install]
     cmds:
       - |
         . {{.VENV_DIR}}/bin/activate
@@ -19,7 +17,6 @@ tasks:
 
   api:
     desc: Run API workflow example
-    deps: [install]
     cmds:
       - |
         . {{.VENV_DIR}}/bin/activate
@@ -27,7 +24,6 @@ tasks:
 
   subworkflow:
     desc: Run sub-workflow example
-    deps: [install]
     cmds:
       - |
         . {{.VENV_DIR}}/bin/activate
@@ -35,7 +31,6 @@ tasks:
 
   extended:
     desc: Run extended nodes demo (Shell, File, Data, Timing, Notifications)
-    deps: [install]
     cmds:
       - |
         . {{.VENV_DIR}}/bin/activate
@@ -43,15 +38,41 @@ tasks:
 
   data-formats:
     desc: Run data formats demo (CSV/Excel operations)
-    deps: [install]
     cmds:
       - |
         . {{.VENV_DIR}}/bin/activate
         PYTHONPATH=. python examples/data_formats_demo.py
 
+  runner:
+    desc: Run resource-optimized WorkflowRunner example
+    cmds:
+      - |
+        . {{.VENV_DIR}}/bin/activate
+        PYTHONPATH=. python examples/resource_optimized_runner.py
+
+  queue:
+    desc: Run queue provider selection example (memory/redis)
+    cmds:
+      - |
+        . {{.VENV_DIR}}/bin/activate
+        PYTHONPATH=. python examples/queue_provider_example.py
+
+  redis-store:
+    desc: Run RedisStateStore example (falls back to JSON if Redis unavailable)
+    cmds:
+      - |
+        . {{.VENV_DIR}}/bin/activate
+        PYTHONPATH=. python examples/redis_state_store_example.py
+
+  resilience:
+    desc: Run resilience nodes example (retry/circuit_breaker/foreach)
+    cmds:
+      - |
+        . {{.VENV_DIR}}/bin/activate
+        PYTHONPATH=. python examples/resilience_nodes_example.py
+
   all:
     desc: Run all examples
-    deps: [install]
     cmds:
       - |
         . {{.VENV_DIR}}/bin/activate
@@ -67,4 +88,12 @@ tasks:
         python examples/extended_nodes_demo.py
         printf '\n\n%s\n' "🔄 Running data formats demo..."
         PYTHONPATH=. python examples/data_formats_demo.py
+        printf '\n\n%s\n' "🔄 Running resource-optimized runner demo..."
+        PYTHONPATH=. python examples/resource_optimized_runner.py
+        printf '\n\n%s\n' "🔄 Running queue provider demo..."
+        PYTHONPATH=. python examples/queue_provider_example.py
+        printf '\n\n%s\n' "🔄 Running Redis state store demo..."
+        PYTHONPATH=. python examples/redis_state_store_example.py
+        printf '\n\n%s\n' "🔄 Running resilience nodes demo..."
+        PYTHONPATH=. python examples/resilience_nodes_example.py
         printf '\n\n%s\n' "✅ All examples completed!"

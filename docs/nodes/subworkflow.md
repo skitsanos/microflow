@@ -1,5 +1,7 @@
 # Subworkflow Nodes
 
+Use these nodes to compose reusable workflow modules and execute them sequentially or in parallel. Best practices: define clear input/output contracts between parent and child workflows, and cap concurrency to match available resources.
+
 ## API
 
 ```python

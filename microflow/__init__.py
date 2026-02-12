@@ -6,8 +6,15 @@ __version__ = "0.1.0"
 __author__ = "Microflow Team"
 
 from .core.workflow import Workflow
+from .core.runner import WorkflowRunner
 from .core.task_spec import TaskSpec, Task, task
 from .storage.json_store import JSONStateStore
+from .storage.redis_store import RedisStateStore
+from .queueing import (
+    InMemoryWorkflowQueue,
+    RedisWorkflowQueue,
+    create_workflow_queue_from_env,
+)
 
 # Import built-in nodes
 from .nodes.conditional import (
@@ -67,6 +74,14 @@ from .nodes.integrations import (
     s3_write,
 )
 from .nodes.resilience import retry_policy, circuit_breaker, foreach
+from .nodes.control_plane import (
+    metrics_emit,
+    trace_span,
+    human_approval,
+    queue_publish,
+    queue_consume,
+    idempotency_guard,
+)
 from .nodes.data_formats import (
     csv_read,
     csv_write,
@@ -84,10 +99,15 @@ from .nodes.data_formats import (
 __all__ = [
     # Core components
     "Workflow",
+    "WorkflowRunner",
     "task",
     "TaskSpec",
     "Task",
     "JSONStateStore",
+    "RedisStateStore",
+    "InMemoryWorkflowQueue",
+    "RedisWorkflowQueue",
+    "create_workflow_queue_from_env",
     # Conditional nodes
     "if_node",
     "switch_node",
@@ -158,6 +178,13 @@ __all__ = [
     "retry_policy",
     "circuit_breaker",
     "foreach",
+    # Control-plane nodes
+    "metrics_emit",
+    "trace_span",
+    "human_approval",
+    "queue_publish",
+    "queue_consume",
+    "idempotency_guard",
     # Data format nodes
     "csv_read",
     "csv_write",

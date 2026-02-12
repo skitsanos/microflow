@@ -1,5 +1,7 @@
 # Shell and Process Nodes
 
+Use these nodes to execute shell commands and process-oriented tasks from within a workflow. Best practices: keep commands explicit and minimal, and enforce timeouts plus return-code checks for predictable automation.
+
 ## API
 
 ```python

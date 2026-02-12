@@ -1,5 +1,7 @@
 # Integration Nodes
 
+Use these nodes to connect workflows with databases, cache providers, ArangoDB AQL, and object storage systems. Best practices: load credentials from environment variables, and keep query inputs parameterized to improve safety and repeatability.
+
 ## API
 
 ```python

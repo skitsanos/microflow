@@ -1,5 +1,7 @@
 # Resilience Nodes
 
+Use these nodes to harden workflow execution with retries, circuit breakers, and controlled fan-out patterns. Best practices: choose retry boundaries around idempotent work only, and set failure thresholds based on real service behavior.
+
 ## API
 
 ```python

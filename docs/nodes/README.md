@@ -1,5 +1,7 @@
 # Microflow Node Docs (Code-Aligned)
 
+This section documents all built-in node categories and maps them to the current implementation in `microflow/nodes/*.py`. Best practices: treat these pages as the canonical node reference and keep examples aligned with actual runtime defaults.
+
 This documentation reflects the current APIs in `microflow/nodes/*.py`.
 
 ## Categories
@@ -16,6 +18,7 @@ This documentation reflects the current APIs in `microflow/nodes/*.py`.
 - [Utilities](./utilities.md)
 - [Integrations](./integrations.md)
 - [Resilience](./resilience.md)
+- [Control Plane](./control-plane.md)
 
 ## Notes
 

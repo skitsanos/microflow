@@ -1,5 +1,7 @@
 # Conditional Nodes
 
+Use these nodes to route workflow execution based on context values or expressions. Best practices: keep conditions deterministic and side-effect free, and prefer named helper predicates for readability and reuse.
+
 ## API
 
 ```python

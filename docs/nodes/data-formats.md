@@ -1,5 +1,7 @@
 # Data Format Nodes
 
+Use these nodes to convert data between CSV, Excel, and JSON representations for ingestion and export workflows. Best practices: standardize delimiters/encodings across pipelines and validate header assumptions before downstream processing.
+
 ## API
 
 ```python

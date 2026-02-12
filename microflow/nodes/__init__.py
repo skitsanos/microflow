@@ -32,6 +32,14 @@ from .integrations import (
     s3_write,
 )
 from .resilience import retry_policy, circuit_breaker, foreach
+from .control_plane import (
+    metrics_emit,
+    trace_span,
+    human_approval,
+    queue_publish,
+    queue_consume,
+    idempotency_guard,
+)
 
 __all__ = [
     # Conditional nodes
@@ -91,4 +99,11 @@ __all__ = [
     "retry_policy",
     "circuit_breaker",
     "foreach",
+    # Control-plane nodes
+    "metrics_emit",
+    "trace_span",
+    "human_approval",
+    "queue_publish",
+    "queue_consume",
+    "idempotency_guard",
 ]

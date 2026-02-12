@@ -1,5 +1,7 @@
 # File Operation Nodes
 
+Use these nodes to read, write, move, and manage files and directories in local workflows. Best practices: prefer explicit paths and encodings, and check success/error keys before chaining file-dependent steps.
+
 ## API
 
 ```python

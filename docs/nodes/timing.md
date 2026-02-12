@@ -1,5 +1,7 @@
 # Timing Nodes
 
+Use these nodes to control execution timing with delays, schedules, wait conditions, and timeout boundaries. Best practices: set explicit max wait/timeout values to prevent unbounded blocking, and keep scheduling rules timezone-aware.
+
 ## API
 
 ```python

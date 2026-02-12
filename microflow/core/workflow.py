@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 import time
 import traceback
 import uuid
@@ -14,9 +15,24 @@ from ..storage.json_store import JSONStateStore
 class Workflow:
     """A workflow composed of tasks with dependencies"""
 
-    def __init__(self, tasks: List[Task], name: str = ""):
+    def __init__(
+        self,
+        tasks: List[Task],
+        name: str = "",
+        max_concurrent_tasks: Optional[int] = None,
+    ):
         self.tasks = tasks
         self.name = name or f"workflow_{uuid.uuid4().hex[:8]}"
+        if max_concurrent_tasks is None:
+            env_cap = os.getenv("MICROFLOW_MAX_CONCURRENT_TASKS")
+            if env_cap:
+                try:
+                    max_concurrent_tasks = max(1, int(env_cap))
+                except ValueError:
+                    max_concurrent_tasks = max(1, os.cpu_count() or 1)
+            else:
+                max_concurrent_tasks = max(1, os.cpu_count() or 1)
+        self.max_concurrent_tasks = max(1, int(max_concurrent_tasks))
 
     def topo_sort(self) -> List[Task]:
         """Topological sort using Kahn's algorithm"""
@@ -167,11 +183,14 @@ class Workflow:
 
                 # Execute ready tasks in parallel
                 try:
+                    semaphore = asyncio.Semaphore(self.max_concurrent_tasks)
+
+                    async def run_limited(current_task: Task) -> None:
+                        async with semaphore:
+                            await self._run_task(store, run_id, current_task, ctx)
+
                     await asyncio.gather(
-                        *[
-                            self._run_task(store, run_id, task, ctx)
-                            for task in ready_tasks
-                        ]
+                        *[run_limited(current_task) for current_task in ready_tasks]
                     )
 
                     # Mark tasks as completed and remove from remaining

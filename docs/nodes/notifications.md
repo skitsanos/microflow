@@ -1,5 +1,7 @@
 # Notification Nodes
 
+Use these nodes to send outbound alerts through channels like email, Slack, and webhook-based systems. Best practices: isolate notification failures from core business flow and tune retries/backoff for each delivery channel.
+
 ## API
 
 ```python

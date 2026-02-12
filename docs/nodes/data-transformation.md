@@ -1,5 +1,7 @@
 # Data Transformation Nodes
 
+Use these nodes to parse, reshape, filter, sort, and aggregate structured workflow data. Best practices: keep transformation expressions simple and testable, and always pin `output_key` names to avoid accidental context collisions.
+
 ## API
 
 ```python

@@ -1,5 +1,7 @@
 # Utility Nodes
 
+Use these nodes for common helper functions such as schema validation, templating, batching, and pagination. Best practices: keep utility outputs narrowly scoped and named, and validate assumptions at boundaries before downstream fan-out.
+
 ## API
 
 ```python

@@ -1,5 +1,7 @@
 # HTTP Request Nodes
 
+Use these nodes to call external HTTP APIs with retries, auth, and configurable response parsing. Best practices: set explicit timeouts and retry policy per endpoint, and validate response status/body before merging into context.
+
 ## API
 
 ```python

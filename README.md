@@ -1,6 +1,6 @@
 # Microflow
 
-A lightweight, powerful workflow engine for Python that provides deterministic task execution with dependency management, retries, and JSON file-based state persistence. Built with a comprehensive node ecosystem for real-world automation.
+A lightweight workflow engine for Python that provides deterministic task execution with dependency management, retries, and pluggable state persistence (JSON and Redis). Built with a comprehensive node ecosystem for real-world automation.
 
 ## ✨ Features
 
@@ -9,9 +9,11 @@ A lightweight, powerful workflow engine for Python that provides deterministic t
 - **Async/Sync Support**: Mix async and sync tasks seamlessly
 - **DAG-based Workflows**: Define task dependencies using simple `>>` operator
 - **Retry Logic**: Configurable retries with exponential backoff
-- **JSON Storage**: Human-readable state persistence using JSON files
+- **Pluggable Storage**: JSON file store (default) and Redis state store
 - **Parallel Execution**: Automatic parallel execution of independent tasks
 - **Context Passing**: Share data between tasks through workflow context
+- **Workflow Runner Limits**: Global concurrency guard for workflow execution
+- **Queue Abstractions**: In-memory queue by default, Redis queue when enabled
 - **Modular Design**: Clean separation of concerns for easy extension
 
 ### Rich Node Ecosystem
@@ -24,6 +26,10 @@ A lightweight, powerful workflow engine for Python that provides deterministic t
 - **📧 Notifications**: Email alerts, Slack integration, multi-channel messaging
 - **📊 Data Formats**: CSV/Excel operations, format conversion, data import/export
 - **🔗 Subworkflows**: Workflow composition, parallel execution, dynamic loading
+- **🔌 Integrations**: DB query/exec, ArangoDB AQL, cache, and S3/MinIO access
+- **🛡️ Resilience**: Retry policies, circuit breakers, and foreach fan-out helpers
+- **🧰 Utilities**: Schema validation, templating, batching, deduplication, pagination
+- **🎛️ Control Plane**: Metrics, tracing, approvals, queue publish/consume, idempotency
 
 ## 🚀 Quick Start
 
@@ -73,6 +79,44 @@ store = JSONStateStore("./data")
 result = await workflow.run("my_run_001", store, {"user": "demo"})
 ```
 
+### Redis Storage Backend
+
+```python
+from microflow import Workflow, RedisStateStore
+
+store = RedisStateStore(redis_url="redis://localhost:6379/0")
+result = await workflow.run("my_run_redis_001", store, {"user": "demo"})
+```
+
+### Concurrency Controls
+
+You can cap workflow and task concurrency to control CPU/RAM usage:
+
+- `MICROFLOW_MAX_CONCURRENT_WORKFLOWS`
+- `MICROFLOW_MAX_CONCURRENT_TASKS`
+
+Use `WorkflowRunner` for global workflow-level limits:
+
+```python
+from microflow import WorkflowRunner
+
+runner = WorkflowRunner(max_concurrent_workflows=4)
+result = await runner.run_workflow(workflow, run_id="run_001", store=store)
+```
+
+### Queue Provider Selection
+
+Queue backend is selected via `QUEUE_PROVIDER`:
+
+- `memory` (default)
+- `redis` (only used when explicitly set)
+
+```python
+from microflow import create_workflow_queue_from_env
+
+provider, queue = create_workflow_queue_from_env()
+```
+
 ### Using Built-in Nodes
 
 ```python
@@ -90,7 +134,7 @@ fetch_users = http_get(
 
 # Filter active users
 filter_active = data_filter(
-    filter_expression="item.get('website') is not None",
+    filter_condition="item.get('website') is not None",
     data_key="users",
     output_key="active_users"
 )
@@ -103,9 +147,9 @@ export_csv = csv_write(
 
 # Send notification
 notify_complete = send_email(
-    to="admin@company.com",
+    to_addresses="admin@company.com",
     subject="User Export Complete",
-    body="Exported {{len(ctx.active_users)}} active users to CSV."
+    body="Exported users to CSV."
 )
 
 # Chain the workflow
@@ -139,6 +183,7 @@ Comprehensive documentation for all built-in nodes:
 - **[🔗 Subworkflows](./docs/nodes/subworkflow.md)** - Workflow composition
 - **[🔌 Integrations](./docs/nodes/integrations.md)** - DB, cache, S3/MinIO nodes
 - **[🛡️ Resilience](./docs/nodes/resilience.md)** - retries, circuit breaking, for-each fan-out
+- **[🎛️ Control Plane](./docs/nodes/control-plane.md)** - metrics, tracing, queue, approval, idempotency
 
 ### Examples
 Run example workflows to see Microflow in action:
@@ -156,6 +201,12 @@ task examples:data-formats
 # Extended nodes demonstration
 task examples:extended
 
+# Resource-optimized runner and queue demos
+task examples:runner
+task examples:queue
+task examples:redis-store
+task examples:resilience
+
 # Run all examples
 task examples:all
 ```
@@ -167,9 +218,12 @@ microflow/
 ├── microflow/
 │   ├── core/              # Core workflow engine
 │   │   ├── workflow.py    # Main workflow execution engine
+│   │   ├── runner.py      # WorkflowRunner with global concurrency cap
 │   │   └── task_spec.py   # Task specification and decorators
 │   ├── storage/           # Storage backends
-│   │   └── json_store.py  # JSON file-based state persistence
+│   │   ├── json_store.py  # JSON file-based state persistence
+│   │   └── redis_store.py # Redis-backed state persistence
+│   ├── queueing.py        # Queue providers (memory/redis)
 │   └── nodes/             # Built-in node library
 │       ├── conditional.py      # IF/ELSE, switch nodes
 │       ├── http_request.py     # HTTP/API nodes
@@ -179,6 +233,10 @@ microflow/
 │       ├── timing.py          # Timing and delay nodes
 │       ├── notifications.py   # Email/Slack notification nodes
 │       ├── data_formats.py    # CSV/Excel format nodes
+│       ├── utilities.py       # Validation, templating, batching helpers
+│       ├── integrations.py    # DB/cache/S3/AQL integrations
+│       ├── resilience.py      # Retry/circuit-breaker/foreach nodes
+│       ├── control_plane.py   # Metrics/tracing/approval/queue nodes
 │       └── subworkflow.py     # Workflow composition nodes
 ├── docs/
 │   └── nodes/            # Comprehensive node documentation
@@ -256,6 +314,10 @@ task examples:basic        # Run basic workflow example
 task examples:api          # Run API integration example
 task examples:data-formats # Run CSV/Excel demo
 task examples:extended     # Run extended nodes demo
+task examples:runner       # Run WorkflowRunner concurrency demo
+task examples:queue        # Run queue provider selection demo
+task examples:redis-store  # Run RedisStateStore demo
+task examples:resilience   # Run resilience nodes demo
 task examples:all          # Run all examples
 
 # Utilities
@@ -315,22 +377,26 @@ read_invoices >> validate_data >> update_accounting >> send_notifications >> arc
 
 ### Error Handling with Fallbacks
 ```python
-from microflow import if_node, retry_with_backoff
+from microflow import if_node, conditional_task, retry_policy
 
-# Retry failed operations
-reliable_api_call = retry_with_backoff(
+# Wrap an existing task with retry policy
+reliable_api_call = retry_policy(
     wrapped_task=api_call,
     max_retries=3,
     initial_delay=1.0,
     backoff_factor=2.0
 )
 
-# Fallback to alternative on failure
-fallback_flow = if_node(
-    condition_expression="not ctx.get('api_success', False)",
-    if_true_task=use_cached_data,
-    if_false_task=process_fresh_data
-)
+# Route between success and fallback branches
+route_after_call = if_node("ctx.get('http_success', False)", name="api_route")
+
+@conditional_task(route="true", condition_node="api_route", name="process_fresh")
+def process_fresh_data(ctx):
+    return {"source": "api"}
+
+@conditional_task(route="false", condition_node="api_route", name="use_cache")
+def use_cached_data(ctx):
+    return {"source": "cache"}
 ```
 
 ### Parallel Processing
@@ -339,11 +405,10 @@ from microflow import parallel_subworkflows
 
 # Process multiple datasets concurrently
 parallel_processing = parallel_subworkflows(
-    workflows=[data_processor] * 3,
-    context_for_each=[
-        {"dataset": "region_north"},
-        {"dataset": "region_south"},
-        {"dataset": "region_west"}
+    workflows=[
+        {"source": data_processor_north, "name": "region_north"},
+        {"source": data_processor_south, "name": "region_south"},
+        {"source": data_processor_west, "name": "region_west"},
     ],
     max_concurrent=2
 )
@@ -355,13 +420,13 @@ from microflow import switch_node
 
 # Route based on data characteristics
 data_router = switch_node(
-    switch_expression="ctx.get('data_type')",
+    expression="ctx.get('data_type')",
     cases={
-        "csv": csv_processor,
-        "json": json_processor,
-        "xml": xml_processor
+        "csv": "csv",
+        "json": "json",
+        "xml": "xml",
     },
-    default_task=generic_processor
+    default_route="default"
 )
 ```
 
@@ -412,18 +477,19 @@ python -m pytest --cov=microflow tests/
 
 ### ✅ Completed Features
 - Core workflow engine with DAG execution
-- JSON-based state persistence
-- Comprehensive node ecosystem (9 categories, 50+ nodes)
+- JSON and Redis state persistence backends
+- Comprehensive node ecosystem (13 categories, 70+ nodes)
 - Async/sync task support
 - Retry logic and error handling
 - Parallel task execution
+- Queue providers (memory + redis via `QUEUE_PROVIDER`)
 - Complete documentation
 
 ### 🚧 Planned Features
 - REST API server
 - Web-based workflow designer
 - Distributed execution
-- Additional storage backends (Redis, PostgreSQL)
+- Additional durable storage backends beyond JSON/Redis
 - Workflow scheduling and cron-like triggers
 - Monitoring and metrics dashboard
 

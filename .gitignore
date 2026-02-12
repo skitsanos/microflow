@@ -153,3 +153,4 @@ data/
 .DS_Store
 Thumbs.dboutput/
 .task/
+output/
