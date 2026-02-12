@@ -114,6 +114,8 @@ tasks:
         printf '%s\n' "  task lint          - Check code quality"
         printf '%s\n' "  task test          - Run tests"
         printf '%s\n' "  task format        - Format code"
+        printf '%s\n' "  task deps-up       - Start local integration dependencies"
+        printf '%s\n' "  task deps-down     - Stop local integration dependencies"
         
   codex-review:
     desc: Run Codex code review on the codebase
@@ -126,4 +128,44 @@ tasks:
           codex --sandbox read-only exec "Review this Python project for potential issues and improvements."
         else
           printf '%s\n' "Codex CLI not found; skipping codex-review task."
+        fi
+
+  deps-up:
+    desc: Start local integration dependencies (MinIO, Redis, Postgres)
+    cmds:
+      - |
+        if [ -f .env ]; then
+          docker compose --env-file .env up -d
+        else
+          docker compose up -d
+        fi
+
+  deps-down:
+    desc: Stop local integration dependencies
+    cmds:
+      - |
+        if [ -f .env ]; then
+          docker compose --env-file .env down
+        else
+          docker compose down
+        fi
+
+  deps-logs:
+    desc: Tail logs for local integration dependencies
+    cmds:
+      - |
+        if [ -f .env ]; then
+          docker compose --env-file .env logs -f
+        else
+          docker compose logs -f
+        fi
+
+  deps-ps:
+    desc: Show local integration dependency status
+    cmds:
+      - |
+        if [ -f .env ]; then
+          docker compose --env-file .env ps
+        else
+          docker compose ps
         fi

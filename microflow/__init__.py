@@ -57,6 +57,15 @@ from .nodes.utilities import (
     http_pagination,
     secret_read,
 )
+from .nodes.integrations import (
+    db_query,
+    db_exec,
+    aql,
+    cache_get,
+    cache_set,
+    s3_read,
+    s3_write,
+)
 from .nodes.data_formats import (
     csv_read,
     csv_write,
@@ -136,6 +145,14 @@ __all__ = [
     "deduplicate",
     "http_pagination",
     "secret_read",
+    # Integration nodes
+    "db_query",
+    "db_exec",
+    "aql",
+    "cache_get",
+    "cache_set",
+    "s3_read",
+    "s3_write",
     # Data format nodes
     "csv_read",
     "csv_write",

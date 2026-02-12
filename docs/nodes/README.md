@@ -14,6 +14,7 @@ This documentation reflects the current APIs in `microflow/nodes/*.py`.
 - [Data Formats](./data-formats.md)
 - [Subworkflows](./subworkflow.md)
 - [Utilities](./utilities.md)
+- [Integrations](./integrations.md)
 
 ## Notes
 

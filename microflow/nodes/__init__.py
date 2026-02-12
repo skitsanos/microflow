@@ -22,6 +22,15 @@ from .utilities import (
     http_pagination,
     secret_read,
 )
+from .integrations import (
+    db_query,
+    db_exec,
+    aql,
+    cache_get,
+    cache_set,
+    s3_read,
+    s3_write,
+)
 
 __all__ = [
     # Conditional nodes
@@ -69,4 +78,12 @@ __all__ = [
     "deduplicate",
     "http_pagination",
     "secret_read",
+    # Integration nodes
+    "db_query",
+    "db_exec",
+    "aql",
+    "cache_get",
+    "cache_set",
+    "s3_read",
+    "s3_write",
 ]

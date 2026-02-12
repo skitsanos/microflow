@@ -137,6 +137,7 @@ Comprehensive documentation for all built-in nodes:
 - **[📧 Notifications](./docs/nodes/notifications.md)** - Email, Slack alerts
 - **[📊 Data Formats](./docs/nodes/data-formats.md)** - CSV/Excel conversion
 - **[🔗 Subworkflows](./docs/nodes/subworkflow.md)** - Workflow composition
+- **[🔌 Integrations](./docs/nodes/integrations.md)** - DB, cache, S3/MinIO nodes
 
 ### Examples
 Run example workflows to see Microflow in action:
@@ -259,7 +260,27 @@ task examples:all          # Run all examples
 # Utilities
 task clean             # Clean up build artifacts
 task codex-review      # Run code review (if available)
+task deps-up           # Start MinIO/Redis/Postgres for integration work
+task deps-down         # Stop local integration dependencies
+task deps-ps           # Show dependency container status
+task deps-logs         # Tail dependency logs
 ```
+
+## Local Integration Dependencies
+
+Use Docker Compose to spin local services for integration testing and platform-node development:
+
+```bash
+task deps-up
+```
+
+Services:
+- MinIO (S3-compatible): `http://localhost:9000`
+- MinIO Console: `http://localhost:9001`
+- Redis: `localhost:6379`
+- Postgres: `localhost:5432`
+
+Detailed setup: [`docs/development/local-dependencies.md`](./docs/development/local-dependencies.md)
 
 ## 🎯 Use Cases
 
