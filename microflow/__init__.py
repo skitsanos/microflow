@@ -66,6 +66,7 @@ from .nodes.integrations import (
     s3_read,
     s3_write,
 )
+from .nodes.resilience import retry_policy, circuit_breaker, foreach
 from .nodes.data_formats import (
     csv_read,
     csv_write,
@@ -153,6 +154,10 @@ __all__ = [
     "cache_set",
     "s3_read",
     "s3_write",
+    # Resilience nodes
+    "retry_policy",
+    "circuit_breaker",
+    "foreach",
     # Data format nodes
     "csv_read",
     "csv_write",

@@ -138,6 +138,7 @@ Comprehensive documentation for all built-in nodes:
 - **[📊 Data Formats](./docs/nodes/data-formats.md)** - CSV/Excel conversion
 - **[🔗 Subworkflows](./docs/nodes/subworkflow.md)** - Workflow composition
 - **[🔌 Integrations](./docs/nodes/integrations.md)** - DB, cache, S3/MinIO nodes
+- **[🛡️ Resilience](./docs/nodes/resilience.md)** - retries, circuit breaking, for-each fan-out
 
 ### Examples
 Run example workflows to see Microflow in action:

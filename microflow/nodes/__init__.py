@@ -31,6 +31,7 @@ from .integrations import (
     s3_read,
     s3_write,
 )
+from .resilience import retry_policy, circuit_breaker, foreach
 
 __all__ = [
     # Conditional nodes
@@ -86,4 +87,8 @@ __all__ = [
     "cache_set",
     "s3_read",
     "s3_write",
+    # Resilience nodes
+    "retry_policy",
+    "circuit_breaker",
+    "foreach",
 ]

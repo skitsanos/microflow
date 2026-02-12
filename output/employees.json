@@ -1,0 +1,37 @@
+[
+  {
+    "id": "1",
+    "name": "Alice Johnson",
+    "department": "Engineering",
+    "salary": "85000",
+    "start_date": "2023-01-15"
+  },
+  {
+    "id": "2",
+    "name": "Bob Smith",
+    "department": "Sales",
+    "salary": "62000",
+    "start_date": "2023-03-20"
+  },
+  {
+    "id": "3",
+    "name": "Carol Davis",
+    "department": "Marketing",
+    "salary": "58000",
+    "start_date": "2023-02-10"
+  },
+  {
+    "id": "4",
+    "name": "David Wilson",
+    "department": "Engineering",
+    "salary": "92000",
+    "start_date": "2022-11-05"
+  },
+  {
+    "id": "5",
+    "name": "Eve Brown",
+    "department": "HR",
+    "salary": "55000",
+    "start_date": "2023-04-12"
+  }
+]

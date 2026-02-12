@@ -15,6 +15,7 @@ This documentation reflects the current APIs in `microflow/nodes/*.py`.
 - [Subworkflows](./subworkflow.md)
 - [Utilities](./utilities.md)
 - [Integrations](./integrations.md)
+- [Resilience](./resilience.md)
 
 ## Notes
 

@@ -1,0 +1,1 @@
+- Never mention Claude in git commit messages, always perform commits and push as the configured git user
