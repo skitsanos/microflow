@@ -49,6 +49,14 @@ from .nodes.data_transform import (
 )
 from .nodes.timing import delay, wait_until, wait_for_condition, rate_limit
 from .nodes.notifications import send_email, slack_notification, simple_email
+from .nodes.utilities import (
+    validate_schema,
+    template_render,
+    batch,
+    deduplicate,
+    http_pagination,
+    secret_read,
+)
 from .nodes.data_formats import (
     csv_read,
     csv_write,
@@ -121,6 +129,13 @@ __all__ = [
     "send_email",
     "slack_notification",
     "simple_email",
+    # Utility nodes
+    "validate_schema",
+    "template_render",
+    "batch",
+    "deduplicate",
+    "http_pagination",
+    "secret_read",
     # Data format nodes
     "csv_read",
     "csv_write",

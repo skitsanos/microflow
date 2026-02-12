@@ -14,6 +14,14 @@ from .data_transform import (
 )
 from .timing import delay, wait_until, wait_for_condition, rate_limit
 from .notifications import send_email, slack_notification, simple_email
+from .utilities import (
+    validate_schema,
+    template_render,
+    batch,
+    deduplicate,
+    http_pagination,
+    secret_read,
+)
 
 __all__ = [
     # Conditional nodes
@@ -54,4 +62,11 @@ __all__ = [
     "send_email",
     "slack_notification",
     "simple_email",
+    # Utility nodes
+    "validate_schema",
+    "template_render",
+    "batch",
+    "deduplicate",
+    "http_pagination",
+    "secret_read",
 ]
