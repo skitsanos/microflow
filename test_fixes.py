@@ -1,8 +1,10 @@
 """Test script to verify the critical fixes"""
 
 import asyncio
+
 from microflow import Workflow, task, JSONStateStore
 from microflow.nodes.data_transform import select_fields, rename_fields
+
 
 @task(name="setup_test_data")
 def setup_test_data(ctx):
@@ -67,7 +69,7 @@ async def main():
     store = JSONStateStore("./data")
 
     try:
-        result = await workflow.run("fix_test_001", store, {})
+        await workflow.run("fix_test_001", store, {})
         print("✅ All fixes working correctly!")
 
     except Exception as e:

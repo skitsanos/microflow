@@ -3,10 +3,11 @@ Example demonstrating n8n-style nodes: IF, SWITCH, HTTP, and sub-workflows
 """
 
 import asyncio
+
 from microflow import (
     Workflow, task, JSONStateStore,
     if_node, switch_node, conditional_task,
-    http_get, http_post, BearerAuth,
+    http_post, BearerAuth,
     subworkflow
 )
 
@@ -167,11 +168,32 @@ audit_subworkflow = subworkflow(
 )
 
 
-def create_n8n_style_workflow():
+@task(name="fetch_low_credits_user_data", max_retries=1)
+async def fetch_low_credits_user_data(ctx):
+    """Simulate fetching user data with low credits and free subscription"""
+    user_id = ctx.get("user_id", "user123")
+
+    await asyncio.sleep(0.5)
+
+    return {
+        "user": {
+            "id": user_id,
+            "name": "John Doe",
+            "email": "john@example.com",
+            "status": "active",
+            "subscription": "free",
+            "credits": 50
+        }
+    }
+
+
+def create_n8n_style_workflow(fetch_task=None):
     """Create a workflow demonstrating n8n-style nodes"""
 
+    entry = fetch_task or fetch_user_data
+
     # Build the workflow DAG
-    fetch_user_data >> check_user_status
+    entry >> check_user_status
 
     # Active user path
     check_user_status >> process_active_user
@@ -202,7 +224,7 @@ def create_n8n_style_workflow():
 
     # All tasks in the workflow
     all_tasks = [
-        fetch_user_data,
+        entry,
         check_user_status,
         process_active_user,
         handle_inactive_user,
@@ -241,23 +263,14 @@ async def main():
         print(f"\n🔄 Running Test Case {i+1}: {test_case['name']}")
         print("=" * 60)
 
-        workflow = create_n8n_style_workflow()
+        # Use a different fetch task for the low credits scenario
+        if "Low Credits" in test_case['name']:
+            workflow = create_n8n_style_workflow(fetch_task=fetch_low_credits_user_data)
+        else:
+            workflow = create_n8n_style_workflow()
         run_id = f"n8n_demo_{i+1:03d}"
 
         try:
-            # Modify test case for different scenarios
-            if "Low Credits" in test_case['name']:
-                # Override the fetch_user_data for low credits scenario
-                original_fetch = fetch_user_data.spec.fn
-
-                async def low_credits_fetch(ctx):
-                    result = await original_fetch(ctx)
-                    result['user']['credits'] = 50  # Low credits
-                    result['user']['subscription'] = 'free'  # Free tier
-                    return result
-
-                fetch_user_data.spec.fn = low_credits_fetch
-
             # Run workflow
             final_ctx = await workflow.run(
                 run_id=run_id,

@@ -179,6 +179,13 @@ def http_request(
                     response_data = response.content
             except Exception as e:
                 response_data = {"parse_error": str(e), "raw_content": response.text}
+                return {
+                    "http_status_code": response.status_code,
+                    "http_headers": dict(response.headers),
+                    "http_data": response_data,
+                    "http_success": False,
+                    "http_url": str(response.url),
+                }
 
             # Check if request was successful
             is_success = 200 <= response.status_code < 300

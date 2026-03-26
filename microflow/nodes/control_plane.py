@@ -323,6 +323,15 @@ def idempotency_guard(
         now = time.time()
 
         if provider == "memory":
+            # Periodic cleanup: every 100 entries, sweep expired keys
+            if len(_MEMORY_IDEMPOTENCY) >= 100:
+                expired_keys = [
+                    k for k, exp in _MEMORY_IDEMPOTENCY.items()
+                    if exp is not None and exp <= now
+                ]
+                for k in expired_keys:
+                    del _MEMORY_IDEMPOTENCY[k]
+
             expires_at = _MEMORY_IDEMPOTENCY.get(resolved_key)
             if expires_at is not None and expires_at > now:
                 duplicate = True

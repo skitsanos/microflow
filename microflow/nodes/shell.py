@@ -56,13 +56,18 @@ def shell_command(
     async def _shell_command(ctx):
         # Resolve dynamic values from context
         resolved_command = command
-        if isinstance(command, str):
-            # Replace context variables: "echo {{user_id}}" -> "echo user123"
-            resolved_command = command.format(**ctx)
-        elif isinstance(command, list):
-            resolved_command = [
-                arg.format(**ctx) if isinstance(arg, str) else arg for arg in command
-            ]
+        try:
+            if isinstance(command, str):
+                # Sanitize context values to prevent shell injection
+                safe_ctx = {k: shlex.quote(str(v)) if isinstance(v, str) else v for k, v in ctx.items()}
+                resolved_command = command.format(**safe_ctx)
+            elif isinstance(command, list):
+                safe_ctx = {k: shlex.quote(str(v)) if isinstance(v, str) else v for k, v in ctx.items()}
+                resolved_command = [
+                    arg.format(**safe_ctx) if isinstance(arg, str) else arg for arg in command
+                ]
+        except KeyError as e:
+            raise KeyError(f"Missing context key for command template: {e}") from e
 
         # Resolve working directory
         resolved_cwd = cwd

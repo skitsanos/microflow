@@ -1,7 +1,6 @@
 """Example demonstrating CSV and Excel data format operations"""
 
 import asyncio
-import os
 from pathlib import Path
 
 from microflow import (
@@ -134,18 +133,18 @@ def verify_conversions(ctx):
     for file in results["files_created"]:
         print(f"  - {file}")
 
-    print(f"\nOperations Summary:")
+    print("\nOperations Summary:")
     for operation, status in results["conversion_summary"].items():
         print(f"  {operation}: {status}")
 
-    print(f"\nData Integrity:")
+    print("\nData Integrity:")
     verification = results["verification_results"]
     print(f"  Original employees: {verification['original_employee_count']}")
     print(f"  CSV roundtrip: {verification['csv_employee_count']} (integrity: {verification['csv_integrity_check']})")
     if verification["excel_available"]:
         print(f"  Excel roundtrip: {verification['excel_employee_count']}")
     else:
-        print(f"  Excel operations: Not available (install: pip install pandas openpyxl)")
+        print("  Excel operations: Not available (install: pip install pandas openpyxl)")
 
     return results
 
@@ -169,8 +168,9 @@ async def main():
 
     # Try to add Excel operations
     try:
-        import pandas as pd
-        import openpyxl
+        import importlib
+        importlib.import_module("pandas")
+        importlib.import_module("openpyxl")
         print("✅ Excel support available (pandas + openpyxl found)")
         excel_workflow_tasks = [
             write_employees_excel,
@@ -202,7 +202,7 @@ async def main():
 
     try:
         print("\n🚀 Running data format workflow...")
-        result = await workflow.run("data_formats_demo_001", store, {})
+        await workflow.run("data_formats_demo_001", store, {})
         print("✅ Data format operations completed successfully!")
 
         # Keep demo files for inspection

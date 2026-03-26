@@ -2,7 +2,7 @@
 
 import asyncio
 
-from microflow import Workflow, circuit_breaker, foreach, retry_policy, task
+from microflow import Workflow, JSONStateStore, circuit_breaker, foreach, retry_policy, task
 
 
 @task(name="flaky_api")
@@ -20,8 +20,10 @@ async def main():
     fanout = foreach(safe, data_key="numbers", item_key="item", max_concurrent=2)
 
     workflow = Workflow([fanout], name="resilience_demo")
+    store = JSONStateStore("./data")
     result = await workflow.run(
         "resilience_example_001",
+        store=store,
         initial_ctx={"numbers": [1, 2, 3, 4]},
     )
 

@@ -2,13 +2,14 @@
 
 import asyncio
 import random
+
 from microflow import Workflow, task, JSONStateStore
 
 
 @task(name="fetch_data", max_retries=2, backoff_s=0.5, description="Fetch data from external source")
 async def fetch_data(ctx):
     """Simulate fetching data from an external API"""
-    print(f"Fetching data...")
+    print("Fetching data...")
 
     # Simulate network delay
     await asyncio.sleep(1)
@@ -112,10 +113,6 @@ async def main():
 
     # Create workflow
     workflow = create_workflow()
-
-    # Print workflow structure
-    print(workflow.visualize())
-    print()
 
     # Create storage
     store = JSONStateStore("./data")

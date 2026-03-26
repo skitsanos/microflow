@@ -5,17 +5,9 @@ Microflow: A lightweight workflow engine for Python
 __version__ = "0.1.0"
 __author__ = "Microflow Team"
 
-from .core.workflow import Workflow
 from .core.runner import WorkflowRunner
 from .core.task_spec import TaskSpec, Task, task
-from .storage.json_store import JSONStateStore
-from .storage.redis_store import RedisStateStore
-from .queueing import (
-    InMemoryWorkflowQueue,
-    RedisWorkflowQueue,
-    create_workflow_queue_from_env,
-)
-
+from .core.workflow import Workflow
 # Import built-in nodes
 from .nodes.conditional import (
     if_node,
@@ -26,54 +18,6 @@ from .nodes.conditional import (
     if_exists,
     switch_on_key,
 )
-from .nodes.http_request import (
-    http_request,
-    http_get,
-    http_post,
-    http_put,
-    http_delete,
-    webhook_call,
-    rest_api_call,
-    BearerAuth,
-    BasicAuth,
-    APIKeyAuth,
-)
-from .nodes.subworkflow import (
-    subworkflow,
-    parallel_subworkflows,
-    workflow_chain,
-    WorkflowLoader,
-    load_workflow_from_file,
-)
-from .nodes.shell import shell_command, python_script, git_command, docker_command
-from .nodes.file_ops import read_file, write_file, copy_file, move_file, list_directory
-from .nodes.data_transform import (
-    json_parse,
-    json_stringify,
-    csv_parse,
-    data_filter,
-    data_transform,
-)
-from .nodes.timing import delay, wait_until, wait_for_condition, rate_limit
-from .nodes.notifications import send_email, slack_notification, simple_email
-from .nodes.utilities import (
-    validate_schema,
-    template_render,
-    batch,
-    deduplicate,
-    http_pagination,
-    secret_read,
-)
-from .nodes.integrations import (
-    db_query,
-    db_exec,
-    aql,
-    cache_get,
-    cache_set,
-    s3_read,
-    s3_write,
-)
-from .nodes.resilience import retry_policy, circuit_breaker, foreach
 from .nodes.control_plane import (
     metrics_emit,
     trace_span,
@@ -95,6 +39,119 @@ from .nodes.data_formats import (
     read_excel_file,
     write_excel_file,
 )
+from .nodes.data_transform import (
+    json_parse,
+    json_stringify,
+    json_query,
+    csv_parse,
+    csv_generate,
+    xml_parse,
+    data_filter,
+    data_transform,
+    data_aggregate,
+    data_sort,
+    select_fields,
+    rename_fields,
+)
+from .nodes.file_ops import (
+    read_file,
+    write_file,
+    copy_file,
+    move_file,
+    list_directory,
+    delete_file,
+    watch_file,
+    read_json_file,
+    write_json_file,
+)
+from .nodes.http_request import (
+    http_request,
+    http_get,
+    http_post,
+    http_put,
+    http_delete,
+    webhook_call,
+    rest_api_call,
+    BearerAuth,
+    BasicAuth,
+    APIKeyAuth,
+)
+from .nodes.integrations import (
+    db_query,
+    db_exec,
+    aql,
+    cache_get,
+    cache_set,
+    s3_read,
+    s3_write,
+)
+from .nodes.notifications import (
+    send_email,
+    slack_notification,
+    simple_email,
+    discord_notification,
+    teams_notification,
+    sms_notification,
+    push_notification,
+    alert_email,
+    success_notification,
+    error_notification,
+)
+from .nodes.resilience import retry_policy, circuit_breaker, foreach
+from .nodes.shell import (
+    shell_command,
+    python_script,
+    git_command,
+    docker_command,
+    npm_command,
+    curl_request,
+    background_process,
+    kill_process,
+    run_script,
+    make_executable,
+    create_directory,
+    remove_directory,
+    archive_files,
+    extract_archive,
+)
+from .nodes.subworkflow import (
+    subworkflow,
+    parallel_subworkflows,
+    workflow_chain,
+    WorkflowLoader,
+    load_workflow_from_file,
+)
+from .nodes.timing import (
+    delay,
+    wait_until,
+    wait_for_condition,
+    rate_limit,
+    wait_seconds,
+    wait_minutes,
+    wait_hours,
+    timeout_wrapper,
+    retry_with_backoff,
+    measure_execution_time,
+    sleep,
+    schedule_at,
+    daily_schedule,
+    timeout_after,
+)
+from .nodes.utilities import (
+    validate_schema,
+    template_render,
+    batch,
+    deduplicate,
+    http_pagination,
+    secret_read,
+)
+from .queueing import (
+    InMemoryWorkflowQueue,
+    RedisWorkflowQueue,
+    create_workflow_queue_from_env,
+)
+from .storage.json_store import JSONStateStore
+from .storage.redis_store import RedisStateStore
 
 __all__ = [
     # Core components
@@ -138,27 +195,65 @@ __all__ = [
     "python_script",
     "git_command",
     "docker_command",
+    "npm_command",
+    "curl_request",
+    "background_process",
+    "kill_process",
+    "run_script",
+    "make_executable",
+    "create_directory",
+    "remove_directory",
+    "archive_files",
+    "extract_archive",
     # File operation nodes
     "read_file",
     "write_file",
     "copy_file",
     "move_file",
     "list_directory",
+    "delete_file",
+    "watch_file",
+    "read_json_file",
+    "write_json_file",
     # Data transformation nodes
     "json_parse",
     "json_stringify",
+    "json_query",
     "csv_parse",
+    "csv_generate",
+    "xml_parse",
     "data_filter",
     "data_transform",
+    "data_aggregate",
+    "data_sort",
+    "select_fields",
+    "rename_fields",
     # Timing nodes
     "delay",
     "wait_until",
     "wait_for_condition",
     "rate_limit",
+    "wait_seconds",
+    "wait_minutes",
+    "wait_hours",
+    "timeout_wrapper",
+    "retry_with_backoff",
+    "measure_execution_time",
+    "sleep",
+    "schedule_at",
+    "daily_schedule",
+    "timeout_after",
     # Notification nodes
     "send_email",
     "slack_notification",
     "simple_email",
+    "discord_notification",
+    "teams_notification",
+    "sms_notification",
+    "push_notification",
+    "alert_email",
+    "success_notification",
+    "error_notification",
     # Utility nodes
     "validate_schema",
     "template_render",

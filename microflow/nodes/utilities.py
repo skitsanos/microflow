@@ -6,8 +6,9 @@ import re
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Sequence, Union
 
-from ..core.task_spec import task
+from ._safe_eval import safe_eval
 from .http_request import HTTPAuth, httpx
+from ..core.task_spec import task
 
 try:
     from jsonschema import validate as jsonschema_validate  # type: ignore[import-untyped]
@@ -228,9 +229,9 @@ def deduplicate(
         try:
             for item in data:
                 if hash_expression:
-                    fingerprint = eval(
+                    fingerprint = safe_eval(
                         hash_expression,
-                        {"item": item, "ctx": ctx, "__builtins__": {}},
+                        {"item": item, "ctx": ctx},
                     )
                 elif key_fields:
                     if isinstance(item, dict):

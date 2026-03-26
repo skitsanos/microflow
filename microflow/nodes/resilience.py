@@ -115,39 +115,41 @@ def circuit_breaker(
         "opened_at": None,
         "half_open_calls": 0,
     }
+    state_lock = asyncio.Lock()
 
     @task(name=node_name, description=f"Circuit breaker for {wrapped_task.spec.name}")
     async def _circuit_breaker(ctx):
         now = time.time()
 
-        if state["mode"] == "open":
-            opened_at = state["opened_at"] or now
-            if (now - opened_at) < reset_timeout_s:
+        async with state_lock:
+            if state["mode"] == "open":
+                opened_at = state["opened_at"] or now
+                if (now - opened_at) < reset_timeout_s:
+                    return {
+                        "circuit_success": False,
+                        "circuit_open": True,
+                        "circuit_state": "open",
+                        "circuit_failure_count": state["failure_count"],
+                    }
+
+                state["mode"] = "half_open"
+                state["half_open_calls"] = 0
+
+            if (
+                    state["mode"] == "half_open"
+                    and state["half_open_calls"] >= half_open_max_calls
+            ):
                 return {
                     "circuit_success": False,
                     "circuit_open": True,
-                    "circuit_state": "open",
+                    "circuit_state": "half_open",
                     "circuit_failure_count": state["failure_count"],
                 }
 
-            state["mode"] = "half_open"
-            state["half_open_calls"] = 0
-
-        if (
-            state["mode"] == "half_open"
-            and state["half_open_calls"] >= half_open_max_calls
-        ):
-            return {
-                "circuit_success": False,
-                "circuit_open": True,
-                "circuit_state": "half_open",
-                "circuit_failure_count": state["failure_count"],
-            }
-
-        try:
             if state["mode"] == "half_open":
                 state["half_open_calls"] += 1
 
+        try:
             result = wrapped_task.spec.fn(ctx)
             if asyncio.iscoroutine(result):
                 result = await result
@@ -157,10 +159,11 @@ def circuit_breaker(
                 raise RuntimeError("Wrapped task returned unsuccessful result")
 
             # success path closes breaker
-            state["mode"] = "closed"
-            state["failure_count"] = 0
-            state["opened_at"] = None
-            state["half_open_calls"] = 0
+            async with state_lock:
+                state["mode"] = "closed"
+                state["failure_count"] = 0
+                state["opened_at"] = None
+                state["half_open_calls"] = 0
 
             if isinstance(result, dict):
                 result.update(
@@ -182,18 +185,19 @@ def circuit_breaker(
             }
 
         except Exception as e:
-            state["failure_count"] += 1
-            if state["failure_count"] >= failure_threshold:
-                state["mode"] = "open"
-                state["opened_at"] = time.time()
+            async with state_lock:
+                state["failure_count"] += 1
+                if state["failure_count"] >= failure_threshold:
+                    state["mode"] = "open"
+                    state["opened_at"] = time.time()
 
-            return {
-                "circuit_success": False,
-                "circuit_open": state["mode"] == "open",
-                "circuit_state": state["mode"],
-                "circuit_failure_count": state["failure_count"],
-                "circuit_error": str(e),
-            }
+                return {
+                    "circuit_success": False,
+                    "circuit_open": state["mode"] == "open",
+                    "circuit_state": state["mode"],
+                    "circuit_failure_count": state["failure_count"],
+                    "circuit_error": str(e),
+                }
 
     return _circuit_breaker
 

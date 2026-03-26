@@ -5,27 +5,24 @@ Shell, File Operations, Data Transformation, Timing, and Notifications
 
 import asyncio
 import json
-from pathlib import Path
+
 from microflow import (
     Workflow, task, JSONStateStore,
 
     # Shell nodes
-    shell_command, python_script, git_command,
+    shell_command, git_command,
 
     # File operation nodes
     write_file, read_file, copy_file, list_directory,
 
     # Data transformation nodes
-    json_parse, json_stringify, csv_parse, data_filter, data_transform,
+    json_parse, csv_parse, data_filter, data_transform,
 
     # Timing nodes
     delay, wait_for_condition,
 
     # Conditional nodes
-    if_node, conditional_task,
-
-    # Notification nodes (mock for demo)
-    simple_email
+    if_node, conditional_task
 )
 
 
@@ -237,8 +234,8 @@ async def mock_email_notification(ctx):
     status = ctx.get("system_status", "unknown")
     user_count = len(ctx.get("engineering_users", []))
 
-    print(f"📧 Mock Email Sent:")
-    print(f"   To: admin@example.com")
+    print("📧 Mock Email Sent:")
+    print("   To: admin@example.com")
     print(f"   Subject: System Report - Status: {status}")
     print(f"   Body: Engineering team has {user_count} members")
     print(f"   System CPU: {ctx.get('metrics', {}).get('cpu_usage', 'N/A')}%")
@@ -388,7 +385,7 @@ async def main():
             }
         )
 
-        print(f"\n🎉 Demo completed successfully!")
+        print("\n🎉 Demo completed successfully!")
         print(f"📊 Final summary: {final_ctx.get('summary', {})}")
 
         # Show run information
@@ -396,7 +393,7 @@ async def main():
         successful_tasks = [name for name, info in run_info['tasks'].items() if info['status'] == 'success']
         failed_tasks = [name for name, info in run_info['tasks'].items() if info['status'] == 'error']
 
-        print(f"\n📈 Execution Statistics:")
+        print("\n📈 Execution Statistics:")
         print(f"   ✅ Successful tasks: {len(successful_tasks)}")
         print(f"   ❌ Failed tasks: {len(failed_tasks)}")
         print(f"   ⏱️  Total execution time: {run_info['finished'] - run_info['started']:.2f}s")

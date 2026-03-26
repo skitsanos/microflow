@@ -3,11 +3,9 @@ Example demonstrating HTTP API workflows similar to n8n
 """
 
 import asyncio
+
 from microflow import (
     Workflow, task, JSONStateStore,
-    http_get, http_post, http_put,
-    webhook_call, rest_api_call,
-    BearerAuth, APIKeyAuth,
     if_node, conditional_task
 )
 
@@ -155,12 +153,36 @@ async def handle_regular_user(ctx):
     }
 
 
-def create_api_workflow():
+@task(name="mock_fetch_newbie_user", max_retries=2)
+async def mock_fetch_newbie_user(ctx):
+    """Mock fetching GitHub user data for a newbie developer"""
+    username = ctx.get("github_username", "newbie_dev")
+    print(f"🐙 Fetching GitHub user: {username}")
+
+    await asyncio.sleep(0.5)
+
+    return {
+        "github_user": {
+            "login": username,
+            "id": 12345,
+            "name": "New Developer",
+            "public_repos": 3,
+            "followers": 15,
+            "following": 9,
+            "created_at": "2011-01-25T18:44:36Z"
+        },
+        "github_api_success": True
+    }
+
+
+def create_api_workflow(fetch_task=None):
     """Create a workflow that mimics common API automation patterns"""
 
+    entry = fetch_task or mock_fetch_github_user
+
     # Build the workflow DAG
-    mock_fetch_github_user >> mock_fetch_user_repos
-    mock_fetch_github_user >> check_influence
+    entry >> mock_fetch_user_repos
+    entry >> check_influence
 
     # Parallel processing based on influence
     check_influence >> handle_influential_user
@@ -176,7 +198,7 @@ def create_api_workflow():
     analyze_repo_languages >> mock_send_email
 
     all_tasks = [
-        mock_fetch_github_user,
+        entry,
         mock_fetch_user_repos,
         check_influence,
         handle_influential_user,
@@ -245,25 +267,12 @@ async def main():
         print(f"\n🔄 Processing user {i+1}: {user_ctx['github_username']}")
         print("=" * 50)
 
-        workflow = create_api_workflow()
-        run_id = f"api_workflow_{i+1:03d}"
-
-        # Modify mock data for different scenarios
+        # Use a different fetch task for the newbie scenario
         if user_ctx['github_username'] == 'newbie_dev':
-            # Override for regular user scenario
-            original_fetch = mock_fetch_github_user.spec.fn
-
-            async def newbie_fetch(ctx):
-                result = await original_fetch(ctx)
-                result['github_user'].update({
-                    'name': 'New Developer',
-                    'login': 'newbie_dev',
-                    'followers': 15,  # Low followers
-                    'public_repos': 3
-                })
-                return result
-
-            mock_fetch_github_user.spec.fn = newbie_fetch
+            workflow = create_api_workflow(fetch_task=mock_fetch_newbie_user)
+        else:
+            workflow = create_api_workflow()
+        run_id = f"api_workflow_{i+1:03d}"
 
         try:
             final_ctx = await workflow.run(

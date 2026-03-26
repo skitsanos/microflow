@@ -47,10 +47,12 @@ class FakeRedisStreams:
     def __init__(self):
         self.streams = {}
         self.groups = set()
+        self._read_cursors = {}
 
     def xgroup_create(self, stream, group, id="0", mkstream=True):
         self.groups.add((stream, group))
         self.streams.setdefault(stream, [])
+        self._read_cursors.setdefault(stream, 0)
         return True
 
     def xadd(self, stream, fields, id="*"):
@@ -67,10 +69,28 @@ class FakeRedisStreams:
     def xreadgroup(self, group, consumer, streams, count=1, block=0):
         stream = next(iter(streams.keys()))
         entries = self.streams.get(stream, [])
-        if not entries:
+        cursor = self._read_cursors.get(stream, 0)
+        if cursor >= len(entries):
             return []
-        msg = entries.pop(0)
+        msg = entries[cursor]
+        self._read_cursors[stream] = cursor + 1
         return [(stream.encode("utf-8"), [msg])]
+
+    def xrange(self, stream, min="-", max="+", count=None):
+        entries = self.streams.get(stream, [])
+        results = []
+        for msg_id, fields in entries:
+            id_str = msg_id.decode("utf-8") if isinstance(msg_id, bytes) else msg_id
+            min_str = min.decode("utf-8") if isinstance(min, bytes) else min
+            max_str = max.decode("utf-8") if isinstance(max, bytes) else max
+            if min_str != "-" and id_str < min_str:
+                continue
+            if max_str != "+" and id_str > max_str:
+                continue
+            results.append((msg_id, fields))
+            if count and len(results) >= count:
+                break
+        return results
 
     def xack(self, stream, group, message_id):
         return 1
@@ -93,15 +113,16 @@ def test_redis_queue_ack_nack_and_dlq():
     assert msg is not None
     assert msg.payload["workflow"] == "demo"
 
-    # first nack should requeue
-    queue.nack(msg.message_id, msg.payload, attempts=1)
-    assert len(fake.streams["q:jobs"]) == 1
+    # first nack should requeue (original + requeued copy in stream)
+    queue.nack(msg.message_id, requeue=True)
+    assert len(fake.streams["q:jobs"]) == 2
 
     msg2 = queue.reserve(block_timeout_s=0)
     assert msg2 is not None
-    queue.nack(msg2.message_id, msg2.payload, attempts=2)
+    assert msg2.payload["workflow"] == "demo"
+    queue.nack(msg2.message_id, to_dlq=True)
 
-    # after max attempts goes to dlq
+    # after to_dlq=True, goes to dlq
     assert len(fake.streams["q:dlq"]) == 1
     dlq_payload_raw = fake.streams["q:dlq"][0][1][b"payload"].decode("utf-8")
     assert json.loads(dlq_payload_raw)["workflow"] == "demo"

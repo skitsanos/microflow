@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timedelta
 from typing import Optional
 
+from ._safe_eval import safe_eval
 from ..core.task_spec import task
 
 
@@ -131,9 +132,7 @@ def wait_for_condition(
 
             try:
                 # Evaluate condition
-                eval_context = {"ctx": ctx, "__builtins__": {}}
-
-                if eval(condition_expression, eval_context):
+                if safe_eval(condition_expression, {"ctx": ctx}):
                     end_time = time.time()
                     return {
                         "condition_met": True,

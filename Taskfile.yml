@@ -13,7 +13,7 @@ tasks:
   venv:
     desc: Create Python virtual environment
     cmds:
-      - "{{.PYTHON}} -m venv {{.VENV_DIR}}"
+      - "uv venv {{.VENV_DIR}} --python {{.PYTHON}}"
       - |
         echo "Virtual environment created at {{.VENV_DIR}}"
         echo "Activate with: source {{.VENV_DIR}}/bin/activate"
@@ -25,11 +25,8 @@ tasks:
     desc: Install dependencies in virtual environment
     deps: [venv]
     cmds:
-      - |
-        . {{.VENV_DIR}}/bin/activate
-        pip install --upgrade pip
-        pip install --upgrade -r {{.REQUIREMENTS}}
-        touch {{.VENV_DIR}}/.requirements.stamp
+      - "uv pip install --upgrade -r {{.REQUIREMENTS}} --python {{.VENV_DIR}}/bin/python"
+      - "touch {{.VENV_DIR}}/.requirements.stamp"
     status:
       - test -f {{.VENV_DIR}}/.requirements.stamp
       - test {{.VENV_DIR}}/.requirements.stamp -nt {{.REQUIREMENTS}}
@@ -38,9 +35,7 @@ tasks:
     desc: Install development dependencies
     deps: [install]
     cmds:
-      - |
-        . {{.VENV_DIR}}/bin/activate
-        pip install -e .
+      - "uv pip install -e . --python {{.VENV_DIR}}/bin/python"
 
   clean:
     desc: Clean up virtual environment and cache files
@@ -100,6 +95,13 @@ tasks:
     cmds:
       - task: lint
       - task: test
+
+  update:
+    desc: Upgrade all dependencies to latest versions
+    deps: [venv]
+    cmds:
+      - "uv pip install --upgrade -r {{.REQUIREMENTS}} --python {{.VENV_DIR}}/bin/python"
+      - "touch {{.VENV_DIR}}/.requirements.stamp"
 
   setup:
     desc: Complete project setup

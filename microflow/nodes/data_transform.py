@@ -6,6 +6,7 @@ import json
 import xml.etree.ElementTree as ET
 from typing import Any, Dict, List, Optional
 
+from ._safe_eval import safe_eval
 from ..core.task_spec import task
 
 
@@ -392,10 +393,7 @@ def data_filter(
         try:
             filtered_items = []
             for item in data:
-                # Create safe evaluation context
-                eval_context = {"item": item, "ctx": ctx, "__builtins__": {}}
-
-                if eval(filter_condition, eval_context):
+                if safe_eval(filter_condition, {"item": item, "ctx": ctx}):
                     filtered_items.append(item)
 
             return {
@@ -451,10 +449,9 @@ def data_transform(
         try:
             transformed_items = []
             for item in data:
-                # Create safe evaluation context
-                eval_context = {"item": item, "ctx": ctx, "__builtins__": {}}
-
-                transformed_item = eval(transform_expression, eval_context)
+                transformed_item = safe_eval(
+                    transform_expression, {"item": item, "ctx": ctx}
+                )
                 transformed_items.append(transformed_item)
 
             return {
@@ -536,18 +533,16 @@ def data_aggregate(
                     result = {group_by: group_key}
 
                     for output_field, expression in aggregations_to_use.items():
-                        eval_context = {
-                            "group": group_items,
-                            "sum": sum,
-                            "len": len,
-                            "min": min,
-                            "max": max,
+                        agg_extras = {
                             "avg": lambda x: sum(x) / len(x) if x else 0,
-                            "__builtins__": {},
                         }
 
                         try:
-                            result[output_field] = eval(expression, eval_context)
+                            result[output_field] = safe_eval(
+                                expression,
+                                {"group": group_items},
+                                extra_builtins=agg_extras,
+                            )
                         except Exception as e:
                             result[output_field] = f"Error: {e}"
 
@@ -557,18 +552,16 @@ def data_aggregate(
                 # Aggregate entire dataset
                 result = {}
                 for output_field, expression in aggregations_to_use.items():
-                    eval_context = {
-                        "group": data,
-                        "sum": sum,
-                        "len": len,
-                        "min": min,
-                        "max": max,
+                    agg_extras = {
                         "avg": lambda x: sum(x) / len(x) if x else 0,
-                        "__builtins__": {},
                     }
 
                     try:
-                        result[output_field] = eval(expression, eval_context)
+                        result[output_field] = safe_eval(
+                            expression,
+                            {"group": data},
+                            extra_builtins=agg_extras,
+                        )
                     except Exception as e:
                         result[output_field] = f"Error: {e}"
 
@@ -628,8 +621,7 @@ def data_sort(
                     return item[sort_by]
                 else:
                     # Treat as expression
-                    eval_context = {"item": item, "__builtins__": {}}
-                    return eval(sort_by, eval_context)
+                    return safe_eval(sort_by, {"item": item})
 
             sorted_data = sorted(data, key=sort_key, reverse=reverse)
 
@@ -708,15 +700,10 @@ def rename_fields(
         try:
             transformed_items = []
             for item in data:
-                # Create safe evaluation context with mapping included
-                eval_context = {
-                    "item": item,
-                    "ctx": ctx,
-                    "mapping": field_mapping,
-                    "__builtins__": {"isinstance": isinstance, "dict": dict},
-                }
-
-                transformed_item = eval(expression, eval_context)
+                transformed_item = safe_eval(
+                    expression,
+                    {"item": item, "ctx": ctx, "mapping": field_mapping},
+                )
                 transformed_items.append(transformed_item)
 
             return {

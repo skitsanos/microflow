@@ -3,10 +3,11 @@ Example demonstrating sub-workflow execution and parallel processing
 """
 
 import asyncio
+
 from microflow import (
     Workflow, task, JSONStateStore,
     subworkflow, parallel_subworkflows,
-    workflow_chain, if_node, conditional_task
+    if_node, conditional_task
 )
 
 
@@ -310,11 +311,37 @@ def aggregate_parallel_results(ctx):
     return aggregate
 
 
-def create_subworkflow_demo():
+@task(name="receive_invalid_user_data")
+async def receive_invalid_user_data(ctx):
+    """Simulate receiving user data without email (for invalid data test)"""
+    user_id = ctx.get("user_id", "user123")
+    print(f"📥 Receiving data for user: {user_id}")
+
+    await asyncio.sleep(0.2)
+
+    result = {
+        "data": {
+            "activity_score": 75,
+            "engagement_score": 30,
+            "completion_rate": 85
+        },
+        "timestamp": "2024-01-01T10:00:00Z",
+        "data_received": True
+    }
+
+    if not ctx.get("skip_email"):
+        result["email"] = f"{user_id}@example.com"
+
+    return result
+
+
+def create_subworkflow_demo(receive_task=None):
     """Create a workflow demonstrating sub-workflow capabilities"""
 
+    entry = receive_task or receive_user_data
+
     # Build main workflow
-    receive_user_data >> validation_step
+    entry >> validation_step
     validation_step >> validation_check
 
     # Conditional branches
@@ -326,12 +353,12 @@ def create_subworkflow_demo():
     processing_step >> notification_step
 
     # Parallel processing demo
-    receive_user_data >> prepare_parallel_data
+    entry >> prepare_parallel_data
     prepare_parallel_data >> parallel_processing
     parallel_processing >> aggregate_parallel_results
 
     all_tasks = [
-        receive_user_data,
+        entry,
         validation_step,
         validation_check,
         proceed_with_processing,
@@ -368,20 +395,12 @@ async def main():
         print(f"\n🔄 Running Test Case {i+1}: {test_case['name']}")
         print("=" * 60)
 
-        workflow = create_subworkflow_demo()
-        run_id = f"subworkflow_demo_{i+1:03d}"
-
-        # Modify behavior for invalid data test
+        # Use a different receive task for the invalid data scenario
         if "Invalid" in test_case['name']:
-            original_receive = receive_user_data.spec.fn
-
-            async def invalid_receive(ctx):
-                result = await original_receive(ctx)
-                if ctx.get("skip_email"):
-                    del result["email"]  # Make data invalid
-                return result
-
-            receive_user_data.spec.fn = invalid_receive
+            workflow = create_subworkflow_demo(receive_task=receive_invalid_user_data)
+        else:
+            workflow = create_subworkflow_demo()
+        run_id = f"subworkflow_demo_{i+1:03d}"
 
         try:
             final_ctx = await workflow.run(

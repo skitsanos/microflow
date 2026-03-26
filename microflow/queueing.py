@@ -80,6 +80,12 @@ class RedisWorkflowQueue:
                     "redis is required for RedisWorkflowQueue. Install with: pip install redis"
                 ) from exc
             self.client = redis.Redis.from_url(redis_url)
+            try:
+                self.client.ping()
+            except Exception as exc:
+                raise ConnectionError(
+                    f"Failed to connect to Redis at {redis_url}: {exc}"
+                ) from exc
         else:
             self.client = client
 
@@ -141,8 +147,27 @@ class RedisWorkflowQueue:
         acked = self.client.xack(self.stream, self.group, message_id)
         return bool(acked)
 
-    def nack(self, message_id: str, payload: Dict[str, Any], attempts: int) -> bool:
-        if attempts >= self.max_attempts:
+    def nack(self, message_id: str, requeue: bool = True, to_dlq: bool = False) -> bool:
+        # Retrieve pending message info to preserve internal behavior
+        # Look up attempts from Redis stream if needed
+        payload: Dict[str, Any] = {}
+        attempts: int = 0
+        try:
+            msgs = self.client.xrange(self.stream, min=message_id, max=message_id, count=1)
+            if msgs:
+                _, fields = msgs[0]
+                payload_raw = fields.get(b"payload") or fields.get("payload") or b"{}"
+                attempts_raw = fields.get(b"attempts") or fields.get("attempts") or b"0"
+                if isinstance(payload_raw, bytes):
+                    payload_raw = payload_raw.decode("utf-8")
+                if isinstance(attempts_raw, bytes):
+                    attempts_raw = attempts_raw.decode("utf-8")
+                payload = json.loads(payload_raw)
+                attempts = int(attempts_raw)
+        except Exception:
+            pass
+
+        if to_dlq or attempts >= self.max_attempts:
             self.client.xadd(
                 self.dlq_stream,
                 {
@@ -151,6 +176,10 @@ class RedisWorkflowQueue:
                     "source_message_id": message_id,
                 },
             )
+            self.client.xack(self.stream, self.group, message_id)
+            return True
+
+        if not requeue:
             self.client.xack(self.stream, self.group, message_id)
             return True
 

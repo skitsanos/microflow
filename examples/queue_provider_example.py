@@ -18,10 +18,7 @@ def main():
 
     print(f"Reserved message: id={msg.message_id}, payload={msg.payload}, attempts={msg.attempts}")
 
-    if provider == "redis":
-        queue.ack(msg.message_id)
-    else:
-        queue.ack(msg.message_id)
+    queue.ack(msg.message_id)
 
     print("Message acknowledged")
 

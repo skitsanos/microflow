@@ -3,6 +3,7 @@
 import asyncio
 from typing import Any, Callable, Dict, Optional, Union
 
+from ._safe_eval import safe_eval
 from ..core.task_spec import task
 
 
@@ -45,7 +46,7 @@ def if_node(
         try:
             if isinstance(condition, str):
                 # Evaluate string expression safely
-                result = eval(condition, {"ctx": ctx, "__builtins__": {}})
+                result = safe_eval(condition, {"ctx": ctx})
             else:
                 # Call function with context
                 result = condition(ctx)
@@ -106,7 +107,7 @@ def switch_node(
         try:
             if isinstance(expression, str):
                 # Evaluate string expression safely
-                value = eval(expression, {"ctx": ctx, "__builtins__": {}})
+                value = safe_eval(expression, {"ctx": ctx})
             else:
                 # Call function with context
                 value = expression(ctx)
